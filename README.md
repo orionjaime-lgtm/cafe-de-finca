@@ -137,6 +137,113 @@ Para conectarte desde VS Code, instalá las extensiones **SQLTools** y **SQLTool
 
 > ⚠️ Los scripts de `data-base/` solo se ejecutan cuando la base se crea de cero. Si alguien cambia el esquema, **todos tienen que recrear su base** con `docker-compose down -v`.
 
+### Levantar el backend
+
+Con la base de datos prendida:
+
+```bash
+cd backend
+./mvnw spring-boot:run        # en Windows: .\mvnw.cmd spring-boot:run
+```
+
+La API queda en `http://localhost:8080/api/...`. Si el puerto 8080 está ocupado:
+
+```bash
+./mvnw spring-boot:run "-Dspring-boot.run.arguments=--server.port=8081"
+```
+
+Para correr los tests (necesitan la base prendida): `./mvnw test`.
+
+---
+
+## 🔌 Backend: endpoints del grupo A
+
+Estos son los primeros endpoints del backend. Todos son de **solo lectura** (`GET`) y alimentan el formulario de pedidos, el panel de caducidad y el panel de alertas.
+
+| Endpoint | Para qué pantalla | Qué devuelve |
+|---|---|---|
+| `GET /api/clientes` | Desplegable del formulario de pedidos | Clientes ordenados por nombre. Acepta `?tipo=B2B` o `?tipo=B2C`. |
+| `GET /api/presentaciones` | Desplegable del formulario de pedidos | Envases (Bolsa 250g, 1kg…) con su peso en gramos, del más chico al más grande. |
+| `GET /api/tipos-molienda` | Desplegable del formulario de pedidos | Grano Entero, Espresso, Italiana, Filtro. |
+| `GET /api/lotes-tostados` | Panel de caducidad y "Café disponible" | Lotes tostados con stock, del más antiguo al más nuevo (FIFO), con días restantes y estado de frescura. Con `?soloDisponibles=true` devuelve solo los que hoy se pueden vender. |
+| `GET /api/caducidad/resumen` | Los 3 números de arriba del panel de caducidad | `{ activos, porVencer, vencidos }` |
+| `GET /api/alertas` | Panel "Alertas Activas" | Alertas de stock de café verde: primero las `CRITICO`, después las `ADVERTENCIA`. |
+| `GET /api/origenes/stock` | Tabla "Límites de Stock Mínimo" | Cada origen con su stock de café verde, su mínimo y su estado (`OK`, `BAJO`, `CRITICO`). |
+
+Si se manda un dato inválido (por ejemplo `?tipo=XYZ`), la API responde `400` con un JSON claro: `{ "estado": 400, "mensaje": "..." }`.
+
+> El backend se generó con IA y fue verificado por el equipo. Los prompts utilizados están en [`docs/uso-de-ia.md`](docs/uso-de-ia.md).
+
+### Cómo está organizado el código
+
+Siguiendo la convención del punto 3, cada endpoint pasa por las mismas capas:
+
+```
+backend/src/main/java/com/cafedefinca/backend/
+├── controller/   ClienteController, CatalogoController, LoteTostadoController,
+│                 CaducidadController, AlertaController, OrigenController
+├── service/      ClienteService, CatalogoService, LoteTostadoService,
+│                 CaducidadService, AlertaService, OrigenService
+├── repository/   una interfaz por tabla (Spring arma el SQL)
+├── entity/       una clase por tabla usada: cliente, presentacion, tipo_molienda,
+│                 origen_cafe, lote_cafe_verde, perfil_tueste, orden_tueste, lote_cafe_tostado
+├── dto/          lo que viaja al frontend (records de Java)
+├── enums/        EstadoFrescura, EstadoStock, NivelAlerta
+├── exception/    errores en JSON claro (ManejadorGlobalErrores)
+├── config/       zona horaria (TiempoConfig) y permiso CORS para React (WebConfig)
+└── util/         ConversorUnidades: la única clase que convierte gramos a kilos
+```
+
+Cada clase está dividida con comentarios por secciones (VARIABLES, CONSTRUCTOR, cada método) y las constantes de negocio están al principio de cada clase, para poder cambiarlas en un solo lugar.
+
+### Reglas de negocio que se implementaron
+
+**Frescura (`CaducidadService`)**
+- `diasRestantes` = días entre hoy y `fecha_caducidad`.
+- `VENCIDO` si la fecha ya pasó **o** si el lote fue marcado `VENCIDO` en la base (por ejemplo, al descartarlo).
+- `POR_VENCER` si quedan 7 días o menos (constante `DIAS_AVISO_VENCIMIENTO`). El día de la caducidad todavía cuenta como por vencer.
+- `OPTIMO` en cualquier otro caso.
+- En el resumen, **`activos` incluye a los `porVencer`**, porque todavía se pueden vender. Solo se cuentan lotes que tienen stock.
+
+**¿Se puede vender un lote hoy? (`LoteTostadoService`)** Tienen que cumplirse las 4 condiciones:
+1. Terminó el reposo (`fecha_disponible_venta` ya llegó).
+2. Le queda stock disponible (no reservado).
+3. No está vencido.
+4. No está marcado `AGOTADO` en la base.
+
+Se calcula con las fechas y no solo con `estado_disponibilidad`, porque todavía no hay ningún proceso que actualice ese estado solo (por ejemplo, pasar de `REPOSO` a `DISPONIBLE`).
+
+**Stock por origen (`OrigenService`)**
+- Stock de un origen = suma de `stock_actual_gramos` de todos sus lotes de café verde.
+- `OK` si alcanza el mínimo, `BAJO` si no lo alcanza, `CRITICO` si además está en 0. Un origen con mínimo 0 nunca entra en alerta.
+
+**Alertas (`AlertaService`)**: no se guardan en la base, se calculan en cada consulta.
+- `CRITICO`: el origen está `BAJO` o `CRITICO`.
+- `ADVERTENCIA` (predictiva): el stock todavía está bien, pero al ritmo de consumo llega al mínimo en 7 días o menos.
+  - Consumo diario = gramos de verde usados en tuestes completados de los últimos 30 días ÷ 30.
+  - Días hasta el mínimo = (stock − mínimo) ÷ consumo diario, redondeado hacia arriba.
+  - Ejemplo con los datos de prueba: Brasil Santos tiene 12 kg y mínimo 10 kg; se tostaron 25 kg en 30 días (0.8 kg/día) → *"Reabastecer en 3 días"*.
+- Las constantes `DIAS_VENTANA_CONSUMO = 30` y `DIAS_AVISO_REABASTECIMIENTO = 7` están al principio de la clase.
+
+### Decisiones técnicas
+
+- **Gramos y dinero en `BigDecimal`**, nunca `double` (regla 2). El JSON devuelve gramos y el frontend decide cómo mostrarlos.
+- **Las entidades solo tienen getters** porque por ahora no se escribe nada. Cuando se agreguen los `POST`, se suman los setters o constructores que hagan falta.
+- **`merma_real_pct`** se mapeó con `insertable = false, updatable = false` (regla 4).
+- **Reloj inyectable (`Clock`)**: los services piden la fecha a `TiempoConfig` en lugar de usar `LocalDate.now()`. Así los tests pueden fijar "hoy" y probar las fechas.
+- **Zona horaria**: Windows con región Argentina le da a Java la zona vieja `America/Buenos_Aires`, que PostgreSQL 15 rechaza al conectarse (`invalid value for parameter "TimeZone"`). Por eso `BackendApplication` y los tests (`pom.xml`) fijan `America/Argentina/Buenos_Aires`.
+- **CORS**: `WebConfig` deja que React llame a la API desde `localhost:5173` (Vite) y `localhost:3000`.
+- **Consultas sin N+1**: `/api/lotes-tostados` trae el lote, la orden de tueste, el origen y el perfil en **una sola consulta** (`JOIN FETCH`).
+
+### Tests
+
+| Clase | Qué prueba |
+|---|---|
+| `BackendApplicationTests` | Que la app arranque y que **cada entidad coincida con el esquema SQL** (`ddl-auto=validate`). |
+| `CaducidadServiceTest` | Los bordes de la frescura (−1, 0, 7 y 8 días) y el lote marcado vencido a mano. |
+| `OrigenServiceTest` | Los bordes de `OK` / `BAJO` / `CRITICO`. |
+| `AlertaServiceTest` | Alertas críticas, la predictiva de Brasil Santos (3 días), que el consumo lento no avise y el orden de las alertas. |
+
 ---
 
 ## 📂 6. Estructura del repositorio
@@ -241,7 +348,8 @@ El proyecto avanza de adentro hacia afuera (*Data-First*): primero los datos, de
 - [x] Entorno Docker con PostgreSQL
 - [x] Esquema de base de datos y datos iniciales
 - [x] Repositorio con colaboradores y `main` protegida
-- [ ] Esqueleto del backend (Spring Boot conectado a la base)
+- [x] Esqueleto del backend (Spring Boot conectado a la base)
+- [x] Endpoints de lectura del grupo A (catálogos, lotes tostados, caducidad, alertas y stock por origen)
 - [ ] Conversor a gramos con tests
 - [ ] Módulo de producción y stock
 - [ ] Módulo de ventas y finanzas

@@ -47,7 +47,8 @@ public class CaducidadService {
 
 	/**
 	 * Cuenta los lotes en inventario según su frescura.
-	 * "activos" incluye a los "por vencer", porque todavía se pueden vender.
+	 * Los tres números son excluyentes: cada lote cuenta en uno solo.
+	 * "activos" son los lotes ÓPTIMOS; los "por vencer" se cuentan aparte.
 	 */
 	public ResumenCaducidadDto obtenerResumen() {
 		LocalDate hoy = LocalDate.now(reloj);
@@ -61,10 +62,7 @@ public class CaducidadService {
 
 			switch (estado) {
 				case OPTIMO -> activos++;
-				case POR_VENCER -> {
-					activos++;
-					porVencer++;
-				}
+				case POR_VENCER -> porVencer++;
 				case VENCIDO -> vencidos++;
 			}
 		}

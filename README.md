@@ -203,7 +203,7 @@ Cada clase está dividida con comentarios por secciones (VARIABLES, CONSTRUCTOR,
 - `VENCIDO` si la fecha ya pasó **o** si el lote fue marcado `VENCIDO` en la base (por ejemplo, al descartarlo).
 - `POR_VENCER` si quedan 7 días o menos (constante `DIAS_AVISO_VENCIMIENTO`). El día de la caducidad todavía cuenta como por vencer.
 - `OPTIMO` en cualquier otro caso.
-- En el resumen, **`activos` incluye a los `porVencer`**, porque todavía se pueden vender. Solo se cuentan lotes que tienen stock.
+- En el resumen, los tres números son **excluyentes**: `activos` son solo los lotes `OPTIMO`, y los `porVencer` y `vencidos` se cuentan aparte (cada lote suma en uno solo). Solo se cuentan lotes que tienen stock.
 
 **¿Se puede vender un lote hoy? (`LoteTostadoService`)** Tienen que cumplirse las 4 condiciones:
 1. Terminó el reposo (`fecha_disponible_venta` ya llegó).

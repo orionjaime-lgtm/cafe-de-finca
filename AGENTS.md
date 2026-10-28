@@ -16,22 +16,22 @@ Es el trabajo de **Prácticas Pre-Profesionales** de un equipo de 4 personas, co
 
 ## 2. Estado actual (actualizar al terminar cada tarea)
 
-| Parte | Estado |
-|---|---|
-| Base de datos (19 tablas, datos base y de prueba) | Hecha |
-| Backend: 7 endpoints `GET` (clientes, presentaciones, tipos de molienda, lotes tostados, resumen de caducidad, alertas, stock por origen) | Hecho, con tests |
-| Backend: producción, pedidos, cobros, suscripciones, hojas de ruta | **Pendiente** |
-| Frontend: 6 pantallas (Alertas, Inventario, Tueste, Pedidos, Cobros, Caducidad) | Hechas con **datos de ejemplo**; todavía **no llaman a la API** |
-| Login con roles, configuración, compras de clientes, suscripción con descuento | **Pendiente** (ver sección 9) |
+| Parte                                                                                                                                     | Estado                                                          |
+| ----------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------- |
+| Base de datos (19 tablas, datos base y de prueba)                                                                                         | Hecha                                                           |
+| Backend: 7 endpoints `GET` (clientes, presentaciones, tipos de molienda, lotes tostados, resumen de caducidad, alertas, stock por origen) | Hecho, con tests                                                |
+| Backend: producción, pedidos, cobros, suscripciones, hojas de ruta                                                                        | **Pendiente**                                                   |
+| Frontend: 6 pantallas (Alertas, Inventario, Tueste, Pedidos, Cobros, Caducidad)                                                           | Hechas con **datos de ejemplo**; todavía **no llaman a la API** |
+| Login con roles, configuración, compras de clientes, suscripción con descuento                                                            | **Pendiente** (ver sección 9)                                   |
 
 ## 3. Stack
 
-| Capa | Tecnología |
-|---|---|
-| Backend | Java 21, Spring Boot (versión en `backend/pom.xml`), Maven (`mvnw`), Spring Data JPA, Validation |
-| Base de datos | PostgreSQL 15 en Docker |
-| Frontend | Next.js 16, React 19, TypeScript, Tailwind CSS 4, pnpm |
-| Infraestructura | Docker Compose (hoy solo la base de datos) |
+| Capa            | Tecnología                                                                                       |
+| --------------- | ------------------------------------------------------------------------------------------------ |
+| Backend         | Java 21, Spring Boot (versión en `backend/pom.xml`), Maven (`mvnw`), Spring Data JPA, Validation |
+| Base de datos   | PostgreSQL 15 en Docker                                                                          |
+| Frontend        | Next.js 16, React 19, TypeScript, Tailwind CSS 4, pnpm                                           |
+| Infraestructura | Docker Compose (hoy solo la base de datos)                                                       |
 
 ## 4. Estructura del repositorio
 
@@ -93,6 +93,7 @@ Estas reglas no se negocian. Si una tarea parece exigir romperlas, pará y consu
 ## 8. Reglas de dominio
 
 **Producción**
+
 - Café verde → **orden de tueste** → **lote tostado**. Un lote tostado nace de **una sola** orden (relación 1 a 1).
 - Merma = `(peso verde usado − peso tostado obtenido) / peso verde usado`. El tostado nunca pesa más que el verde.
 - El lote tostado tiene **reposo** (`fecha_disponible_venta`, según `perfil_tueste.horas_reposo_minimas`) y **caducidad** (`fecha_caducidad`; en los datos de prueba, 30 días desde el tueste: convención a confirmar con el cliente).
@@ -101,6 +102,7 @@ Estas reglas no se negocian. Si una tarea parece exigir romperlas, pará y consu
 - Frescura: `VENCIDO` si la fecha pasó; `POR_VENCER` si quedan 7 días o menos; `OPTIMO` en el resto.
 
 **Ventas y cobros**
+
 - Todo pedido tiene cliente. Para ventas de mostrador sin datos existe el cliente **"Consumidor Final"** (B2C).
 - Un detalle de pedido exige **presentación** (envase con su peso en gramos), **tipo de molienda** y **lote tostado**. Gramos del renglón = `cantidad_envases × presentacion.peso_gramos`.
 - `subtotal = cantidad_envases × precio_unitario`. Hoy **no hay lista de precios**: el precio viaja en el pedido.
@@ -109,12 +111,14 @@ Estas reglas no se negocian. Si una tarea parece exigir romperlas, pará y consu
 - La integración con AFIP queda **fuera del MVP** (Hito 2); la factura solo lleva tipo y número simples.
 
 **Suscripciones (abono recurrente B2B) y reparto**
+
 - Una suscripción genera pedidos automáticos con frecuencia `SEMANAL` o `MENSUAL`. `dia_entrega`: 1 a 7 (semanal) o 1 a 28 (mensual).
 - `proxima_fecha_generacion` es la **fecha de entrega del próximo pedido**. Al generarlo: +7 días (semanal) o el mismo `dia_entrega` del mes siguiente (mensual). Solo las suscripciones `ACTIVA` generan pedidos.
 - No puede haber dos pedidos de la misma suscripción para la misma fecha de entrega (índice único en la base).
 - Los pedidos se agrupan en una **hoja de ruta** (una sola por fecha) y se ordenan con `pedido.orden_visita`. Los clientes B2B tienen domicilio obligatorio.
 
 **Alertas**
+
 - No se guardan: se calculan en cada consulta a partir del stock y el mínimo (`origen_cafe.stock_minimo_alerta_gramos`). Alerta predictiva: consumo de los últimos 30 días ÷ 30. Si el mínimo es 0 no hay alerta.
 
 ## 9. Alcance del MVP y pendientes
@@ -124,6 +128,7 @@ Estas reglas no se negocian. Si una tarea parece exigir romperlas, pará y consu
 **Fuera del MVP (Hito 2):** AFIP, reportes de rentabilidad, app móvil nativa, e-commerce externo.
 
 **Pedidos recientes del profesor — supuestos, a confirmar antes de construir:**
+
 - Suscripción de clientes con porcentaje de descuento (membresía simple, B2B y B2C), **distinta** del abono recurrente.
 - Sección de compras para clientes (probablemente reutilizando Pedidos, filtrada por cliente).
 - Inicio de sesión con roles: administrador (todo), tueste, vendedor y cliente (solo compras).
@@ -144,12 +149,12 @@ La carpeta [`skills/`](skills/) contiene procedimientos paso a paso para las tar
 
 ## 12. Responsabilidades del equipo
 
-| Persona | Área |
-|---|---|
-| Orión | Base de datos, revisión de Pull Requests, documentación, pruebas |
-| Thiago | Backend: producción, suscripciones y hojas de ruta |
-| Ignacio | Backend: pedidos, cobros y pagos |
-| Agustín | Frontend |
+| Persona | Área                                                             |
+| ------- | ---------------------------------------------------------------- |
+| Orión   | Base de datos, revisión de Pull Requests, documentación, pruebas |
+| Thiago  | Backend: producción, suscripciones y hojas de ruta               |
+| Ignacio | Backend: pedidos, cobros y pagos                                 |
+| Agustín | Frontend                                                         |
 
 Evitá tocar archivos del área de otra persona sin avisarle.
 
@@ -161,3 +166,6 @@ Evitá tocar archivos del área de otra persona sin avisarle.
 - No agregar dependencias grandes ni cambiar versiones de Java, Spring Boot o Next.js sin consultar.
 - No sobrescribir el `README.md` ni este archivo: si hay que actualizarlos, solo agregar o corregir secciones.
 - No dar por probado lo que no se ejecutó: si no pudiste correr los tests, decilo.
+- Cuando se suben ramas automaticamente nunca mencionar a la inteligencia artificial utilizada, solo al integrante del grupo.
+- No inventar cosas, si no conseguis el resultado de busqueda o encontras la respuesta indicada, avisarlo. Nunca inventarlo.
+- Siempre verificar primero usando los archivos dentro del proyecto (Indicaciones del trabajo practico, mensajes del equipo, etc) antes de verificar en internet.

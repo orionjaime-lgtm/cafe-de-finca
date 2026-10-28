@@ -2,10 +2,10 @@
 
 El backend de Café de Finca se generó con una IA (Claude Code) y fue verificado por el equipo. Este documento deja registrados los dos prompts que se usaron: uno para **generar** el código y otro para **verificarlo**.
 
-| Etapa | Rol dado a la IA | Qué se pidió |
-|---|---|---|
-| 1. Generación | Programador full stack, líder del backend | Escribir los primeros endpoints del backend en Java con Spring Boot. |
-| 2. Verificación | Tester | Revisar el código sin modificarlo e indicar qué está mal, qué es mejorable y qué requiere un cambio urgente. |
+| Etapa           | Rol dado a la IA                          | Qué se pidió                                                                                                 |
+| --------------- | ----------------------------------------- | ------------------------------------------------------------------------------------------------------------ |
+| 1. Generación   | Programador full stack, líder del backend | Escribir los primeros endpoints del backend en Java con Spring Boot.                                         |
+| 2. Verificación | Tester                                    | Revisar el código sin modificarlo e indicar qué está mal, qué es mejorable y qué requiere un cambio urgente. |
 
 ---
 
@@ -42,10 +42,11 @@ para el backend vamos a utilizar:  java con springboot
 ```
 
 **Material adjunto al prompt:**
+
 - Una imagen con los endpoints a cumplir (los 7 `GET` del grupo A).
 - El PDF de la propuesta del proyecto (`Sin título (1).pdf`).
 
-**Resultado:** los endpoints y la explicación quedaron en la sección *"Backend: endpoints del grupo A"* del [README](../README.md).
+**Resultado:** los endpoints y la explicación quedaron en la sección _"Backend: endpoints del grupo A"_ del [README](../README.md).
 
 ---
 
@@ -54,7 +55,7 @@ para el backend vamos a utilizar:  java con springboot
 ```text
 [Rol]
 
-sos un testes y venis a verificar el codigo backend del proyecto
+sos un tester y venis a verificar el codigo backend del proyecto
 
 [Objetivo]
 

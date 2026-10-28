@@ -172,6 +172,30 @@ Estos son los primeros endpoints del backend. Todos son de **solo lectura** (`GE
 
 Si se manda un dato inválido (por ejemplo `?tipo=XYZ`), la API responde `400` con un JSON claro: `{ "estado": 400, "mensaje": "..." }`.
 
+### Backend: catálogos de producción y lotes verdes
+
+Alimentan los desplegables de ingreso de café verde y, más adelante, de órdenes de tueste.
+
+| Endpoint | Qué hace |
+|---|---|
+| `GET /api/proveedores` | Proveedores ordenados por razón social. |
+| `GET /api/origenes` | Orígenes (país, región, variedad, mínimo de alerta). El stock por origen sigue en `GET /api/origenes/stock`. |
+| `GET /api/perfiles-tueste` | Perfiles Claro, Medio y Oscuro, con su merma esperada y horas de reposo. |
+| `GET /api/lotes-verdes` | Lotes de café verde del más antiguo al más nuevo (FIFO), con su stock en gramos. |
+| `POST /api/lotes-verdes` | Ingresa un lote. Responde `201` con el lote creado. |
+
+Cuerpo del `POST /api/lotes-verdes`:
+
+```json
+{ "idOrigen": 1, "idProveedor": 2, "codigoLote": "LV-HUI-002",
+  "cantidad": 150, "unidad": "kg", "cantBolsas": 5, "fechaIngreso": "2026-10-28" }
+```
+
+- La cantidad llega con su unidad (`g`, `kg` o `lb`) y se convierte a gramos con `ConversorUnidades`. El stock actual arranca igual al peso inicial.
+- `fechaIngreso` es opcional (por defecto, hoy) y no puede ser futura.
+- `cantBolsas` es obligatorio porque la tabla lo exige: el peso de una bolsa de café verde no es fijo, por eso no se calcula a partir de la unidad.
+- Errores: `400` si falta un dato, la unidad no existe o el origen o el proveedor no existen; `409` si el `codigoLote` ya está usado.
+
 > El backend se generó con IA y fue verificado por el equipo. Los prompts utilizados están en [`docs/uso-de-ia.md`](docs/uso-de-ia.md).
 
 ### Cómo está organizado el código

@@ -111,6 +111,15 @@ class OrdenTuesteControllerTest {
 	}
 
 	@Test
+	void unIdDeLoteConDecimalesResponde400EnVezDeTomarOtroLote() throws Exception {
+		String cuerpo = CUERPO_VALIDO.replace("\"idLoteVerde\": 1,", "\"idLoteVerde\": 1.9,");
+
+		mockMvc.perform(post("/api/ordenes-tueste").contentType(MediaType.APPLICATION_JSON).content(cuerpo))
+				.andExpect(status().isBadRequest());
+		verify(ordenTuesteService, never()).crear(any());
+	}
+
+	@Test
 	void sinUnidadResponde400() throws Exception {
 		String cuerpo = CUERPO_VALIDO.replace("\"unidad\": \"kg\"", "\"unidad\": \" \"");
 

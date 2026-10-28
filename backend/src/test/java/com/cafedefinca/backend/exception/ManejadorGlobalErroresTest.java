@@ -58,6 +58,14 @@ class ManejadorGlobalErroresTest {
 	}
 
 	@Test
+	void conflictoDevuelve409ConSuMensaje() {
+		ResponseEntity<ErrorDto> respuesta = manejador.manejarConflicto(new ConflictoException("Ya existe ese lote."));
+
+		assertThat(respuesta.getStatusCode().value()).isEqualTo(409);
+		assertThat(respuesta.getBody().mensaje()).isEqualTo("Ya existe ese lote.");
+	}
+
+	@Test
 	void errorDeLaBaseDevuelve409SinMostrarElSql() {
 		ResponseEntity<ErrorDto> respuesta = manejador.manejarIntegridad(
 				new DataIntegrityViolationException("violates check constraint secreto_interno"));

@@ -194,7 +194,8 @@ Cuerpo del `POST /api/lotes-verdes`:
 - La cantidad llega con su unidad (`g`, `kg` o `lb`) y se convierte a gramos con `ConversorUnidades`. El stock actual arranca igual al peso inicial.
 - `fechaIngreso` es opcional (por defecto, hoy) y no puede ser futura.
 - `cantBolsas` es obligatorio porque la tabla lo exige: el peso de una bolsa de café verde no es fijo, por eso no se calcula a partir de la unidad.
-- Errores: `400` si falta un dato, la unidad no existe o el origen o el proveedor no existen; `409` si el `codigoLote` ya está usado.
+- Errores: `400` si falta un dato, la unidad no existe o el origen o el proveedor no existen; `409` con el mensaje "Ya existe un lote verde con el código X." si el `codigoLote` ya está usado.
+- Los campos enteros (`idOrigen`, `idProveedor`, `cantBolsas`) no aceptan decimales (`1.5` da `400` en lugar de guardarse como `1`), y `fechaIngreso` solo acepta texto `AAAA-MM-DD`.
 
 ### Backend: órdenes de tueste
 

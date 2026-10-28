@@ -16,6 +16,9 @@ import java.util.Optional;
  */
 public interface LoteCafeVerdeRepository extends JpaRepository<LoteCafeVerde, Integer> {
 
+	// ¿Ya hay un lote con este código? (el código es UNIQUE en la base)
+	boolean existsByCodigoLote(String codigoLote);
+
 	// Lotes de café verde del más antiguo al más nuevo (FIFO, igual que los lotes tostados).
 	// JOIN FETCH trae el origen en la misma consulta para no hacer una consulta por lote.
 	@Query("""

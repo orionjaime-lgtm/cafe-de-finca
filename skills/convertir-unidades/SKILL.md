@@ -19,8 +19,10 @@ description: Usar cuando el código reciba, guarde, calcule o muestre pesos de c
 ## Backend
 
 1. La conversión vive en **una sola clase**: `util/ConversorUnidades`. No convertir en controllers, services ni entidades por separado.
-2. La entrada con unidad (por ejemplo, `cantidad = 3`, `unidad = "LB"`) se traduce a gramos en el service **antes** de validar o guardar.
-3. Para envases: `gramos = cantidad_envases × presentacion.peso_gramos` (el peso sale de la tabla, no se escribe a mano).
+2. La entrada con unidad se traduce a gramos en el service **antes** de validar o guardar:
+   - `ConversorUnidades.aGramos(cantidad, UnidadPeso.LB)` o con el texto del frontend: `ConversorUnidades.aGramos(cantidad, "lb")`. Unidades: `g`, `kg`, `lb` (enum `UnidadPeso`). Rechaza cantidades de cero o negativas y unidades desconocidas con un error 400.
+3. Para envases: `ConversorUnidades.envasesAGramos(cantidadEnvases, presentacion.getPesoGramos())` (el peso sale de la tabla, no se escribe a mano).
+   Para mostrar kilos: `ConversorUnidades.gramosAKilos(gramos)`.
 4. Nunca usar `double`. Usar `BigDecimal` y definir el redondeo de forma explícita: gramos con 3 decimales (`NUMERIC(12,3)` en la base).
 5. La API **devuelve gramos**. No devolver kilos ya convertidos, salvo en textos de mensajes.
 

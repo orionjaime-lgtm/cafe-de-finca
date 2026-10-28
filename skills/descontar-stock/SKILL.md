@@ -12,7 +12,7 @@ El problema central del cliente es **vender café que no existe**. Toda operaci�
 1. **Una transacción por operación.** El método del service lleva `@Transactional`. Si algo falla, no queda nada a medias (por ejemplo, un pedido guardado sin descontar el stock).
 2. **Validar antes de escribir.** Revisar todas las condiciones y recién después modificar datos.
 3. **El descuento es un método de la entidad**, no un setter. Ejemplo: `lote.descontarStock(gramos)` lanza una excepción si `gramos` es mayor que el stock disponible o no es positivo.
-4. **Stock insuficiente → HTTP 409** con `{ "estado": 409, "mensaje": "Stock insuficiente" }`. Crear una excepción propia (por ejemplo, `StockInsuficienteException`) y mapearla en `ManejadorGlobalErrores`.
+4. **Stock insuficiente → HTTP 409** con `{ "estado": 409, "mensaje": "Stock insuficiente..." }`. Lanzar `StockInsuficienteException` (ya existe en `exception/`; el `ManejadorGlobalErrores` la convierte en 409). Para que el mensaje lleve los gramos: `new StockInsuficienteException(gramosDisponibles, gramosPedidos)`.
 5. **Concurrencia:** si dos personas piden el mismo lote a la vez, no deben venderse los mismos gramos. Leer el lote con bloqueo (`@Lock(LockModeType.PESSIMISTIC_WRITE)` en el repository) dentro de la transacción.
 6. **Estado del lote:** si el stock llega a 0, marcar `AGOTADO`.
 

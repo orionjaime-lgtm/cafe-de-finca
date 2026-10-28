@@ -100,6 +100,30 @@ class AlertaServiceTest {
 	}
 
 	// ---------------------------------------------------------------------
+	// MÍNIMO EN 0: NUNCA HAY ALERTA
+	// ---------------------------------------------------------------------
+	@Test
+	void conMinimoEnCeroNoGeneraAlertaPredictivaAunqueHayaConsumoAlto() {
+		// 5 kg en stock, mínimo 0, 25 kg tostados en 30 días (833.333 g/día): sin la regla daría "reabastecer en 6 días"
+		when(origenService.listarStock()).thenReturn(List.of(
+				origen(5, "Perú", "Cusco", "5000", "0", EstadoStock.OK)));
+		when(ordenTuesteRepository.sumarVerdeTostadoPorOrigenDesde(any())).thenReturn(List.of(
+				new TotalPorOrigen(5, new BigDecimal("25000"))));
+
+		assertThat(servicio.listarAlertas()).isEmpty();
+	}
+
+	@Test
+	void conMinimoEnCeroYSinStockNoGeneraAlerta() {
+		when(origenService.listarStock()).thenReturn(List.of(
+				origen(6, "Bolivia", "Caranavi", "0", "0", EstadoStock.OK)));
+		when(ordenTuesteRepository.sumarVerdeTostadoPorOrigenDesde(any())).thenReturn(List.of(
+				new TotalPorOrigen(6, new BigDecimal("9000"))));
+
+		assertThat(servicio.listarAlertas()).isEmpty();
+	}
+
+	// ---------------------------------------------------------------------
 	// ORDEN: PRIMERO LAS CRÍTICAS
 	// ---------------------------------------------------------------------
 	@Test

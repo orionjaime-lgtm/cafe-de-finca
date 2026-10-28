@@ -124,6 +124,11 @@ public class AlertaService {
 		long diasHastaMinimo;
 		String mensaje;
 
+		// Sin mínimo configurado (0) el origen nunca entra en alerta, ni siquiera la predictiva
+		if (origen.stockMinimoGramos().signum() <= 0) {
+			return null;
+		}
+
 		// Sin consumo reciente no se puede predecir nada
 		if (gramosTostadosEnVentana.compareTo(BigDecimal.ZERO) <= 0) {
 			return null;

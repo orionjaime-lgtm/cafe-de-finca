@@ -5,7 +5,7 @@ package com.cafedefinca.backend.dto;
  * Solo cuenta lotes que todavía tienen stock (disponible o reservado).
  */
 public record ResumenCaducidadDto(
-		// Lotes que todavía no caducaron (incluye los que están por vencer)
+		// Lotes en estado óptimo (no incluye los que están por vencer)
 		long activos,
 
 		// Lotes que caducan dentro de los próximos 7 días

@@ -58,6 +58,21 @@ public class LoteCafeVerde {
 	}
 
 	// ---------------------------------------------------------------------
+	// CONSTRUCTOR DE NEGOCIO: un lote recién ingresado
+	// El stock actual arranca igual al peso inicial (todavía no se tostó nada).
+	// ---------------------------------------------------------------------
+	public LoteCafeVerde(OrigenCafe origen, Integer idProveedor, String codigoLote,
+			LocalDate fechaIngreso, Integer cantBolsas, BigDecimal pesoInicialGramos) {
+		this.origen = origen;
+		this.idProveedor = idProveedor;
+		this.codigoLote = codigoLote;
+		this.fechaIngreso = fechaIngreso;
+		this.cantBolsas = cantBolsas;
+		this.pesoInicialGramos = pesoInicialGramos;
+		this.stockActualGramos = pesoInicialGramos;
+	}
+
+	// ---------------------------------------------------------------------
 	// GETTERS
 	// ---------------------------------------------------------------------
 	public Integer getIdLoteVerde() {

@@ -1,5 +1,6 @@
 package com.cafedefinca.backend.entity;
 
+import com.cafedefinca.backend.exception.StockInsuficienteException;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
@@ -70,6 +71,17 @@ public class LoteCafeVerde {
 		this.cantBolsas = cantBolsas;
 		this.pesoInicialGramos = pesoInicialGramos;
 		this.stockActualGramos = pesoInicialGramos;
+	}
+
+	// ---------------------------------------------------------------------
+	// MÉTODO DE NEGOCIO: DESCONTAR STOCK
+	// Si no alcanza el café, lanza StockInsuficienteException (el manejador la convierte en 409).
+	// ---------------------------------------------------------------------
+	public void descontarStock(BigDecimal gramos) {
+		if (gramos.compareTo(stockActualGramos) > 0) {
+			throw new StockInsuficienteException(stockActualGramos, gramos);
+		}
+		this.stockActualGramos = stockActualGramos.subtract(gramos);
 	}
 
 	// ---------------------------------------------------------------------

@@ -25,4 +25,16 @@ public interface OrdenTuesteRepository extends JpaRepository<OrdenTueste, Intege
 			GROUP BY lv.origen.idOrigen
 			""")
 	List<TotalPorOrigen> sumarVerdeTostadoPorOrigenDesde(@Param("desde") LocalDateTime desde);
+
+	// Todas las órdenes, de la más reciente a la más antigua.
+	// JOIN FETCH trae en una sola consulta el lote verde, su origen y el perfil de tueste.
+	@Query("""
+			SELECT o
+			FROM OrdenTueste o
+			JOIN FETCH o.loteVerde lv
+			JOIN FETCH lv.origen
+			JOIN FETCH o.perfilTueste
+			ORDER BY o.fechaHoraTueste DESC, o.idOrdenTueste DESC
+			""")
+	List<OrdenTueste> buscarTodasConDetalle();
 }

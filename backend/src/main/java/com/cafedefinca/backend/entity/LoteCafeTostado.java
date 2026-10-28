@@ -23,6 +23,13 @@ import java.time.LocalDateTime;
 public class LoteCafeTostado {
 
 	// ---------------------------------------------------------------------
+	// CONSTANTES
+	// ---------------------------------------------------------------------
+
+	// Estado con el que nace todo lote: todavía no terminó el reposo
+	private static final String ESTADO_REPOSO = "REPOSO";
+
+	// ---------------------------------------------------------------------
 	// COLUMNAS
 	// ---------------------------------------------------------------------
 	@Id
@@ -63,6 +70,23 @@ public class LoteCafeTostado {
 	// CONSTRUCTOR (JPA lo necesita vacío)
 	// ---------------------------------------------------------------------
 	protected LoteCafeTostado() {
+	}
+
+	// ---------------------------------------------------------------------
+	// CONSTRUCTOR DE NEGOCIO: el lote que sale de un tueste
+	// Nace en REPOSO, con todo el café disponible y nada reservado.
+	// ---------------------------------------------------------------------
+	public LoteCafeTostado(OrdenTueste ordenTueste, String codigoLoteTostado, LocalDateTime fechaHoraFinTueste,
+			LocalDateTime fechaDisponibleVenta, LocalDate fechaCaducidad, BigDecimal pesoInicialGramos) {
+		this.ordenTueste = ordenTueste;
+		this.codigoLoteTostado = codigoLoteTostado;
+		this.fechaHoraFinTueste = fechaHoraFinTueste;
+		this.fechaDisponibleVenta = fechaDisponibleVenta;
+		this.fechaCaducidad = fechaCaducidad;
+		this.pesoInicialGramos = pesoInicialGramos;
+		this.stockDisponibleGramos = pesoInicialGramos;
+		this.stockReservadoGramos = BigDecimal.ZERO;
+		this.estadoDisponibilidad = ESTADO_REPOSO;
 	}
 
 	// ---------------------------------------------------------------------

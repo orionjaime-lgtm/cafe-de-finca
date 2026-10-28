@@ -5,6 +5,7 @@ import com.cafedefinca.backend.dto.NuevoLoteVerdeDto;
 import com.cafedefinca.backend.entity.LoteCafeVerde;
 import com.cafedefinca.backend.entity.OrigenCafe;
 import com.cafedefinca.backend.entity.Proveedor;
+import com.cafedefinca.backend.exception.ConflictoException;
 import com.cafedefinca.backend.exception.SolicitudInvalidaException;
 import com.cafedefinca.backend.repository.LoteCafeVerdeRepository;
 import com.cafedefinca.backend.repository.OrigenCafeRepository;
@@ -134,6 +135,25 @@ class LoteVerdeServiceTest {
 		LoteVerdeDto lote = servicio.crear(pedido("LV-HUI-009", "10", "kg", hoy));
 
 		assertThat(lote.fechaIngreso()).isEqualTo(hoy);
+	}
+
+	@Test
+	void unCodigoRepetidoSeRechazaConUnMensajeClaroYNoSeGuarda() {
+		when(loteRepository.existsByCodigoLote("LV-HUI-001")).thenReturn(true);
+
+		assertThatThrownBy(() -> servicio.crear(pedido("LV-HUI-001", "10", "kg", null)))
+				.isInstanceOf(ConflictoException.class)
+				.hasMessage("Ya existe un lote verde con el código LV-HUI-001.");
+		verify(loteRepository, never()).save(any());
+	}
+
+	@Test
+	void elCodigoRepetidoSeDetectaAunqueVengaConEspacios() {
+		when(loteRepository.existsByCodigoLote("LV-HUI-001")).thenReturn(true);
+
+		assertThatThrownBy(() -> servicio.crear(pedido("  LV-HUI-001  ", "10", "kg", null)))
+				.isInstanceOf(ConflictoException.class);
+		verify(loteRepository, never()).save(any());
 	}
 
 	@Test

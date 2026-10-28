@@ -194,7 +194,33 @@ Cuerpo del `POST /api/lotes-verdes`:
 - La cantidad llega con su unidad (`g`, `kg` o `lb`) y se convierte a gramos con `ConversorUnidades`. El stock actual arranca igual al peso inicial.
 - `fechaIngreso` es opcional (por defecto, hoy) y no puede ser futura.
 - `cantBolsas` es obligatorio porque la tabla lo exige: el peso de una bolsa de café verde no es fijo, por eso no se calcula a partir de la unidad.
-- Errores: `400` si falta un dato, la unidad no existe o el origen o el proveedor no existen; `409` si el `codigoLote` ya está usado.
+- Errores: `400` si falta un dato, la unidad no existe o el origen o el proveedor no existen; `409` con el mensaje "Ya existe un lote verde con el código X." si el `codigoLote` ya está usado.
+- Los campos enteros (`idOrigen`, `idProveedor`, `cantBolsas`) no aceptan decimales (`1.5` da `400` en lugar de guardarse como `1`), y `fechaIngreso` solo acepta texto `AAAA-MM-DD`.
+
+### Backend: órdenes de tueste
+
+| Endpoint | Qué hace |
+|---|---|
+| `GET /api/ordenes-tueste` | Órdenes de la más reciente a la más antigua, cada una con el lote tostado que salió de ella. |
+| `POST /api/ordenes-tueste` | Registra un tueste. Responde `201` con la orden creada. |
+
+Cuerpo del `POST /api/ordenes-tueste`:
+
+```json
+{ "idLoteVerde": 1, "idPerfilTueste": 2, "pesoVerdeUsado": 5,
+  "pesoTostadoObtenido": 4.25, "unidad": "kg", "operadorTostador": "Marta" }
+```
+
+Registrar un tueste hace tres cosas **en una sola transacción**: descuenta el café verde, guarda la orden y crea el lote tostado. Si algo falla, no queda nada a medias.
+
+- Los dos pesos llegan con la misma unidad (`g`, `kg` o `lb`) y se convierten a gramos con `ConversorUnidades`. El operador es opcional.
+- La fecha del tueste la pone el backend con su reloj; el cliente no la manda.
+- **Lote tostado nuevo:** código `LT-xxxx` (el siguiente al mayor usado, desde `LT-1001`), estado `REPOSO` y todo el café disponible.
+  - `fecha_hora_fin_tueste` = tueste + `tiempo_tueste_min` del perfil.
+  - `fecha_disponible_venta` = fin del tueste + `horas_reposo_minimas` del perfil (0 si el perfil no tiene).
+  - `fecha_caducidad` = día del tueste + 30 días (`DIAS_CADUCIDAD`, convención a confirmar con el cliente).
+- **Dos tuestes a la vez sobre el mismo lote verde** se hacen de a uno: el lote se bloquea durante la transacción, así el stock nunca se descuenta de más.
+- Errores: `409` "Stock insuficiente: hay X g disponibles y se pidieron Y g." si el verde no alcanza; `400` si falta un dato, la unidad no existe, el lote o el perfil no existen, o el tostado pesa más que el verde.
 
 > El backend se generó con IA y fue verificado por el equipo. Los prompts utilizados están en [`docs/uso-de-ia.md`](docs/uso-de-ia.md).
 

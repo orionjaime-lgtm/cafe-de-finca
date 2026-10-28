@@ -82,6 +82,14 @@ public class ManejadorGlobalErrores {
 	}
 
 	// ---------------------------------------------------------------------
+	// LO PEDIDO CHOCA CON ALGO QUE YA EXISTE (ej: código de lote repetido) -> 409
+	// ---------------------------------------------------------------------
+	@ExceptionHandler(ConflictoException.class)
+	public ResponseEntity<ErrorDto> manejarConflicto(ConflictoException ex) {
+		return responder(HttpStatus.CONFLICT, ex.getMessage());
+	}
+
+	// ---------------------------------------------------------------------
 	// LA BASE RECHAZÓ EL DATO (CHECK, UNIQUE, clave foránea) -> 409
 	// No se devuelve el detalle del SQL al frontend; queda en el registro del servidor.
 	// ---------------------------------------------------------------------

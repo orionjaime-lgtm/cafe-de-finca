@@ -22,6 +22,13 @@ import java.time.LocalDateTime;
 public class OrdenTueste {
 
 	// ---------------------------------------------------------------------
+	// CONSTANTES
+	// ---------------------------------------------------------------------
+
+	// Estado con el que nace toda orden (el otro valor que acepta la base es ANULADO)
+	private static final String ESTADO_COMPLETADO = "COMPLETADO";
+
+	// ---------------------------------------------------------------------
 	// COLUMNAS
 	// ---------------------------------------------------------------------
 	@Id
@@ -60,6 +67,21 @@ public class OrdenTueste {
 	// CONSTRUCTOR (JPA lo necesita vacío)
 	// ---------------------------------------------------------------------
 	protected OrdenTueste() {
+	}
+
+	// ---------------------------------------------------------------------
+	// CONSTRUCTOR DE NEGOCIO: un tueste recién hecho
+	// Nace COMPLETADO. La merma real no se pasa: la calcula la base.
+	// ---------------------------------------------------------------------
+	public OrdenTueste(LoteCafeVerde loteVerde, PerfilTueste perfilTueste, LocalDateTime fechaHoraTueste,
+			BigDecimal pesoVerdeUsadoG, BigDecimal pesoTostadoObtenidoG, String operadorTostador) {
+		this.loteVerde = loteVerde;
+		this.perfilTueste = perfilTueste;
+		this.fechaHoraTueste = fechaHoraTueste;
+		this.pesoVerdeUsadoG = pesoVerdeUsadoG;
+		this.pesoTostadoObtenidoG = pesoTostadoObtenidoG;
+		this.operadorTostador = operadorTostador;
+		this.estadoOrden = ESTADO_COMPLETADO;
 	}
 
 	// ---------------------------------------------------------------------

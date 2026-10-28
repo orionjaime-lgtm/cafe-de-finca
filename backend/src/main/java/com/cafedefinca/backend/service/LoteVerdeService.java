@@ -5,6 +5,7 @@ import com.cafedefinca.backend.dto.NuevoLoteVerdeDto;
 import com.cafedefinca.backend.entity.LoteCafeVerde;
 import com.cafedefinca.backend.entity.OrigenCafe;
 import com.cafedefinca.backend.entity.Proveedor;
+import com.cafedefinca.backend.exception.ConflictoException;
 import com.cafedefinca.backend.exception.SolicitudInvalidaException;
 import com.cafedefinca.backend.repository.LoteCafeVerdeRepository;
 import com.cafedefinca.backend.repository.OrigenCafeRepository;
@@ -79,7 +80,8 @@ public class LoteVerdeService {
 	/**
 	 * Valida los datos, convierte la cantidad a gramos y guarda el lote.
 	 * El stock actual arranca igual al peso inicial.
-	 * Un código de lote repetido lo rechaza la base (UNIQUE) y el manejador de errores responde 409.
+	 * Un código de lote repetido responde 409 con un mensaje claro. Si dos pedidos con el mismo código
+	 * llegan a la vez, la restricción UNIQUE de la base deja pasar solo a uno (el otro recibe el 409 genérico).
 	 */
 	@Transactional
 	public LoteVerdeDto crear(NuevoLoteVerdeDto datos) {
@@ -89,8 +91,14 @@ public class LoteVerdeService {
 				.orElseThrow(() -> new SolicitudInvalidaException("No existe el proveedor con id " + datos.idProveedor() + "."));
 		LocalDate hoy = LocalDate.now(reloj);
 		LocalDate fechaIngreso = datos.fechaIngreso() != null ? datos.fechaIngreso() : hoy;
+		String codigo = datos.codigoLote().trim();
 		BigDecimal pesoGramos;
 		LoteCafeVerde lote;
+
+		// 0. El código no puede estar repetido
+		if (loteCafeVerdeRepository.existsByCodigoLote(codigo)) {
+			throw new ConflictoException("Ya existe un lote verde con el código " + codigo + ".");
+		}
 
 		// 1. La fecha de ingreso no puede ser futura
 		if (fechaIngreso.isAfter(hoy)) {
@@ -111,7 +119,7 @@ public class LoteVerdeService {
 		lote = loteCafeVerdeRepository.save(new LoteCafeVerde(
 				origen,
 				proveedor.getIdProveedor(),
-				datos.codigoLote().trim(),
+				codigo,
 				fechaIngreso,
 				datos.cantBolsas(),
 				pesoGramos));

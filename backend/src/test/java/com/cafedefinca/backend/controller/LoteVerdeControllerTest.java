@@ -13,6 +13,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 
+import static org.hamcrest.Matchers.containsString;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -89,6 +90,46 @@ class LoteVerdeControllerTest {
 				.andExpect(status().isBadRequest())
 				.andExpect(jsonPath("$.mensaje").value(org.hamcrest.Matchers.containsString("cantBolsas")));
 		verify(loteVerdeService, never()).crear(any());
+	}
+
+	@Test
+	void unaCantidadDeBolsasConDecimalesResponde400EnVezDeTruncarla() throws Exception {
+		String cuerpo = CUERPO_VALIDO.replace("\"cantBolsas\": 5", "\"cantBolsas\": 1.5");
+
+		mockMvc.perform(post("/api/lotes-verdes").contentType(MediaType.APPLICATION_JSON).content(cuerpo))
+				.andExpect(status().isBadRequest())
+				.andExpect(jsonPath("$.estado").value(400));
+		verify(loteVerdeService, never()).crear(any());
+	}
+
+	@Test
+	void unIdDeOrigenConDecimalesResponde400() throws Exception {
+		String cuerpo = CUERPO_VALIDO.replace("\"idOrigen\": 1", "\"idOrigen\": 1.9");
+
+		mockMvc.perform(post("/api/lotes-verdes").contentType(MediaType.APPLICATION_JSON).content(cuerpo))
+				.andExpect(status().isBadRequest());
+		verify(loteVerdeService, never()).crear(any());
+	}
+
+	@Test
+	void unaFechaComoNumeroSueltoResponde400EnVezDeTomarlaComoFecha() throws Exception {
+		String cuerpo = CUERPO_VALIDO.replace("\"cantBolsas\": 5", "\"cantBolsas\": 5, \"fechaIngreso\": 20261028");
+
+		mockMvc.perform(post("/api/lotes-verdes").contentType(MediaType.APPLICATION_JSON).content(cuerpo))
+				.andExpect(status().isBadRequest())
+				.andExpect(jsonPath("$.mensaje").value(org.hamcrest.Matchers.not(containsString("posterior a hoy"))));
+		verify(loteVerdeService, never()).crear(any());
+	}
+
+	@Test
+	void unaFechaEnTextoIsoSigueFuncionando() throws Exception {
+		String cuerpo = CUERPO_VALIDO.replace("\"cantBolsas\": 5", "\"cantBolsas\": 5, \"fechaIngreso\": \"2026-10-01\"");
+		when(loteVerdeService.crear(any(NuevoLoteVerdeDto.class))).thenReturn(new LoteVerdeDto(
+				10, "LV-HUI-002", 1, "Colombia Huila", 2, "Exportadora Huila", LocalDate.of(2026, 10, 1), 5,
+				new BigDecimal("150000.000"), new BigDecimal("150000.000")));
+
+		mockMvc.perform(post("/api/lotes-verdes").contentType(MediaType.APPLICATION_JSON).content(cuerpo))
+				.andExpect(status().isCreated());
 	}
 
 	@Test

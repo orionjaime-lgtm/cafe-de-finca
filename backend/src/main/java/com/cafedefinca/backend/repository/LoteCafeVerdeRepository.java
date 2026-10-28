@@ -2,15 +2,22 @@ package com.cafedefinca.backend.repository;
 
 import com.cafedefinca.backend.dto.TotalPorOrigen;
 import com.cafedefinca.backend.entity.LoteCafeVerde;
+import jakarta.persistence.LockModeType;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
 import java.util.List;
+import java.util.Optional;
 
 /**
  * Acceso a la tabla "lote_cafe_verde".
  */
 public interface LoteCafeVerdeRepository extends JpaRepository<LoteCafeVerde, Integer> {
+
+	// ¿Ya hay un lote con este código? (el código es UNIQUE en la base)
+	boolean existsByCodigoLote(String codigoLote);
 
 	// Lotes de café verde del más antiguo al más nuevo (FIFO, igual que los lotes tostados).
 	// JOIN FETCH trae el origen en la misma consulta para no hacer una consulta por lote.
@@ -21,6 +28,13 @@ public interface LoteCafeVerdeRepository extends JpaRepository<LoteCafeVerde, In
 			ORDER BY lv.fechaIngreso ASC, lv.idLoteVerde ASC
 			""")
 	List<LoteCafeVerde> buscarTodosConOrigen();
+
+	// Busca un lote y lo bloquea hasta que termine la transacción (SELECT ... FOR UPDATE).
+	// Así, dos tuestes simultáneos sobre el mismo lote no pueden descontar de más: el segundo espera
+	// al primero y recién ahí ve el stock ya descontado.
+	@Lock(LockModeType.PESSIMISTIC_WRITE)
+	@Query("SELECT lv FROM LoteCafeVerde lv WHERE lv.idLoteVerde = :id")
+	Optional<LoteCafeVerde> buscarPorIdConBloqueo(@Param("id") Integer id);
 
 	// Suma el stock actual de todos los lotes de café verde, agrupado por origen.
 	// Los orígenes sin lotes no aparecen en el resultado (el service los toma como 0 g).

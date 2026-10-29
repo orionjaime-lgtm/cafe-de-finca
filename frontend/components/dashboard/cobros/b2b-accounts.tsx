@@ -35,9 +35,9 @@ const accounts: Account[] = [
 ]
 
 const statusStyles = {
-  'due-soon': 'border-amber-200 bg-amber-50 text-amber-700',
+  'due-soon': 'border-warning/20 bg-warning/10 text-warning dark:text-amber-300',
   overdue: 'border-transparent bg-destructive text-white',
-  current: 'border-emerald-200 bg-emerald-50 text-emerald-700',
+  current: 'border-success/20 bg-success/10 text-success dark:text-green-300',
 }
 
 export function B2bAccounts() {

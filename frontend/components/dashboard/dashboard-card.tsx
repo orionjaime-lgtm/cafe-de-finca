@@ -12,7 +12,7 @@ export function DashboardCard({ title, description, action, className, children 
   return (
     <section
       className={cn(
-        'flex flex-col rounded-2xl border border-border bg-card p-6 shadow-[0_1px_2px_rgba(28,25,23,0.04),0_8px_24px_-12px_rgba(28,25,23,0.08)]',
+        'flex flex-col rounded-2xl border border-border bg-card p-6 shadow-[0_1px_2px_rgba(28,25,23,0.04),0_8px_24px_-12px_rgba(28,25,23,0.08)] dark:shadow-[0_1px_2px_rgba(0,0,0,0.25),0_8px_24px_-12px_rgba(0,0,0,0.35)]',
         className,
       )}
     >

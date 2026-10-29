@@ -34,7 +34,7 @@ export function NotificationChannels() {
               key={id}
               className={cn(
                 'flex flex-col gap-4 rounded-xl border p-4 transition-colors',
-                isOn ? 'border-[#e3d3c6] bg-[#faf6f2]' : 'border-border bg-card',
+                isOn ? 'border-primary/20 bg-secondary' : 'border-border bg-card',
               )}
             >
               <div className="flex items-center justify-between">

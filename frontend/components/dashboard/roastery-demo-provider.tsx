@@ -1,447 +1,81 @@
 'use client'
 
-import { createContext, useContext, useEffect, useState } from 'react'
+import { createContext, useCallback, useContext, useEffect, useState } from 'react'
+import { apiGet, apiPost } from '@/lib/api'
 
-export type GreenCoffeeLot = {
-  id: string
-  origin: string
-  region: string
-  variety: string
-  supplier: string
-  purchaseDate: string
-  stockGrams: number
-  minimumGrams: number
-}
+export type GreenCoffeeLot = { id: string; numericId: number; code: string; origin: string; supplier: string; purchaseDate: string; stockGrams: number; initialGrams: number }
+export type RoastedCoffeeLot = { id: string; numericId: number; code: string; origin: string; profile: string; roastDate: string; availableDate: string; expirationDate: string; stockGrams: number; availableForSale: boolean; freshness: string }
+export type RoastOrder = { id: string; numericId: number; lotId: string; origin: string; profile: string; greenInputGrams: number; roastedOutputGrams: number; lossPercent: number; createdAt: string; operator: string | null }
+export type Origin = { idOrigen: number; pais: string; region: string; variedad: string; alturaMsnm: number; notasCata: string; stockMinimoAlertaGramos: number }
+export type Supplier = { idProveedor: number; cuit: string; razonSocial: string; paisOrigen: string; telefonoEmail: string }
+export type RoastProfile = { idPerfilTueste: number; nombrePerfil: string; tempObjetivoC: number; tiempoTuesteMin: number; mermaEsperadaPct: number; horasReposoMinimas: number }
+export type Customer = { idCliente: number; tipoCliente: string; nombreRazonSocial: string; cuitODni: string; condicionIva: string; plazoCtaCteDias: number; limiteCredito: number }
+export type Presentation = { idPresentacion: number; nombreEnvase: string; pesoGramos: number }
+export type GrindingType = { idTipoMolienda: number; nombreMolienda: string; tipoCafetera: string; nivelGranulometria: string; esGranoEntero: boolean }
+export type StockRow = { idOrigen: number; pais: string; region: string; variedad: string; stockActualGramos: number; stockMinimoGramos: number; estado: string }
+export type AlertRow = { nivel: string; idOrigen: number; origen: string; mensaje: string; stockActualGramos: number; stockMinimoGramos: number; consumoDiarioGramos: number | null; diasEstimados: number | null }
+export type ExpirySummary = { activos: number; porVencer: number; vencidos: number }
 
-export type RoastedCoffeeLot = {
-  id: string
-  origin: string
-  profile: string
-  roastDate: string
-  availableDate: string
-  expirationDate: string
-  stockGrams: number
-}
+type PurchaseInput = { idOrigen: number; idProveedor: number; codigoLote: string; cantidad: number; unidad: string; cantBolsas: number; fechaIngreso?: string }
+type RoastInput = { idLoteVerde: number; idPerfilTueste: number; pesoVerdeUsado: number; pesoTostadoObtenido: number; unidad: string; operadorTostador?: string }
+type InventoryContext = { greenLots: GreenCoffeeLot[]; roastedLots: RoastedCoffeeLot[]; roastOrders: RoastOrder[]; origins: Origin[]; suppliers: Supplier[]; roastProfiles: RoastProfile[]; customers: Customer[]; presentations: Presentation[]; grindingTypes: GrindingType[]; stockRows: StockRow[]; alerts: AlertRow[]; expirySummary: ExpirySummary; isReady: boolean; storageError: string | null; refresh: () => Promise<void>; recordPurchase: (purchase: PurchaseInput) => Promise<GreenCoffeeLot>; recordRoast: (order: RoastInput) => Promise<RoastOrder>; recordCustomerOrder: (order: { roastedLotId: string; quantityGrams: number }) => boolean }
 
-export type RoastOrder = {
-  id: string
-  origin: string
-  profile: string
-  greenInputGrams: number
-  roastedOutputGrams: number
-  lossPercent: number
-  restingDays: number
-  createdAt: string
-}
-
-type RoastInput = {
-  greenLotId: string
-  profile: string
-  inputGrams: number
-  lossPercent: number
-  restingDays: number
-}
-
-type PurchaseInput = {
-  origin: string
-  region: string
-  variety: string
-  supplier: string
-  purchaseDate: string
-  amountGrams: number
-}
-
-type CustomerOrderInput = {
-  roastedLotId: string
-  quantityGrams: number
-}
-
-type DemoInventory = {
-  greenLots: GreenCoffeeLot[]
-  roastedLots: RoastedCoffeeLot[]
-  roastOrders: RoastOrder[]
-  isReady: boolean
-  storageError: string | null
-  recordPurchase: (purchase: PurchaseInput) => boolean
-  recordRoast: (order: RoastInput) => boolean
-  recordCustomerOrder: (order: CustomerOrderInput) => boolean
-  resetDemo: () => void
-}
-
-const STORAGE_KEY = 'cafe-de-finca:roastery-demo:v1'
-
-const initialGreenLots: GreenCoffeeLot[] = [
-  {
-    id: 'VG-2041',
-    origin: 'Colombia',
-    region: 'Huila',
-    variety: 'Caturra lavado',
-    supplier: 'Finca El Paraíso',
-    purchaseDate: '2026-10-08',
-    stockGrams: 33_000,
-    minimumGrams: 12_000,
-  },
-  {
-    id: 'VG-2038',
-    origin: 'Brasil',
-    region: 'Cerrado Mineiro',
-    variety: 'Bourbon natural',
-    supplier: 'Cooperativa Sul de Minas',
-    purchaseDate: '2026-10-03',
-    stockGrams: 21_500,
-    minimumGrams: 10_000,
-  },
-  {
-    id: 'VG-2032',
-    origin: 'Etiopía',
-    region: 'Yirgacheffe',
-    variety: 'Heirloom lavado',
-    supplier: 'Origen Selecto',
-    purchaseDate: '2026-09-27',
-    stockGrams: 3_400,
-    minimumGrams: 10_000,
-  },
-  {
-    id: 'VG-2028',
-    origin: 'Perú',
-    region: 'Cajamarca',
-    variety: 'Typica lavado',
-    supplier: 'Andes Coffee Co.',
-    purchaseDate: '2026-09-21',
-    stockGrams: 0,
-    minimumGrams: 8_000,
-  },
-]
-
-const initialRoastedLots: RoastedCoffeeLot[] = [
-  {
-    id: 'LT-1082',
-    origin: 'Colombia Huila · Caturra',
-    profile: 'Tueste medio',
-    roastDate: '2026-10-20',
-    availableDate: '2026-10-22',
-    expirationDate: '2026-11-19',
-    stockGrams: 12_600,
-  },
-  {
-    id: 'LT-1079',
-    origin: 'Brasil Cerrado · Bourbon',
-    profile: 'Tueste oscuro',
-    roastDate: '2026-10-16',
-    availableDate: '2026-10-18',
-    expirationDate: '2026-11-15',
-    stockGrams: 8_250,
-  },
-  {
-    id: 'LT-1074',
-    origin: 'Etiopía Yirgacheffe · Heirloom',
-    profile: 'Tueste claro',
-    roastDate: '2026-10-02',
-    availableDate: '2026-10-04',
-    expirationDate: '2026-11-01',
-    stockGrams: 4_100,
-  },
-  {
-    id: 'LT-1068',
-    origin: 'Colombia Huila · Caturra',
-    profile: 'Tueste medio',
-    roastDate: '2026-09-18',
-    availableDate: '2026-09-20',
-    expirationDate: '2026-10-18',
-    stockGrams: 1_650,
-  },
-]
-
-const initialRoastOrders: RoastOrder[] = [
-  {
-    id: 'OT-058',
-    origin: 'Colombia Huila · Caturra',
-    profile: 'Tueste medio',
-    greenInputGrams: 15_000,
-    roastedOutputGrams: 12_600,
-    lossPercent: 16,
-    restingDays: 2,
-    createdAt: '2026-10-20T09:30:00',
-  },
-  {
-    id: 'OT-057',
-    origin: 'Brasil Cerrado · Bourbon',
-    profile: 'Tueste oscuro',
-    greenInputGrams: 10_000,
-    roastedOutputGrams: 8_250,
-    lossPercent: 17.5,
-    restingDays: 2,
-    createdAt: '2026-10-16T14:15:00',
-  },
-  {
-    id: 'OT-056',
-    origin: 'Etiopía Yirgacheffe · Heirloom',
-    profile: 'Tueste claro',
-    greenInputGrams: 5_000,
-    roastedOutputGrams: 4_100,
-    lossPercent: 18,
-    restingDays: 2,
-    createdAt: '2026-10-02T11:00:00',
-  },
-]
-
-const DemoInventoryContext = createContext<DemoInventory | null>(null)
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null
-}
-
-function isGreenLot(value: unknown): value is GreenCoffeeLot {
-  return (
-    isRecord(value) &&
-    typeof value.id === 'string' &&
-    typeof value.origin === 'string' &&
-    typeof value.region === 'string' &&
-    typeof value.variety === 'string' &&
-    typeof value.supplier === 'string' &&
-    typeof value.purchaseDate === 'string' &&
-    typeof value.stockGrams === 'number' &&
-    Number.isFinite(value.stockGrams) &&
-    value.stockGrams >= 0 &&
-    typeof value.minimumGrams === 'number' &&
-    Number.isFinite(value.minimumGrams) &&
-    value.minimumGrams >= 0
-  )
-}
-
-function isRoastedLot(value: unknown): value is RoastedCoffeeLot {
-  return (
-    isRecord(value) &&
-    typeof value.id === 'string' &&
-    typeof value.origin === 'string' &&
-    typeof value.profile === 'string' &&
-    typeof value.roastDate === 'string' &&
-    typeof value.availableDate === 'string' &&
-    typeof value.expirationDate === 'string' &&
-    typeof value.stockGrams === 'number' &&
-    Number.isFinite(value.stockGrams) &&
-    value.stockGrams >= 0
-  )
-}
-
-function isRoastOrder(value: unknown): value is RoastOrder {
-  return (
-    isRecord(value) &&
-    typeof value.id === 'string' &&
-    typeof value.origin === 'string' &&
-    typeof value.profile === 'string' &&
-    typeof value.greenInputGrams === 'number' &&
-    Number.isFinite(value.greenInputGrams) &&
-    typeof value.roastedOutputGrams === 'number' &&
-    Number.isFinite(value.roastedOutputGrams) &&
-    typeof value.lossPercent === 'number' &&
-    Number.isFinite(value.lossPercent) &&
-    typeof value.restingDays === 'number' &&
-    Number.isFinite(value.restingDays) &&
-    typeof value.createdAt === 'string'
-  )
-}
-
-function isStoredInventory(
-  value: unknown,
-): value is { greenLots: GreenCoffeeLot[]; roastedLots: RoastedCoffeeLot[]; roastOrders: RoastOrder[] } {
-  return (
-    isRecord(value) &&
-    Array.isArray(value.greenLots) &&
-    value.greenLots.every(isGreenLot) &&
-    Array.isArray(value.roastedLots) &&
-    value.roastedLots.every(isRoastedLot) &&
-    Array.isArray(value.roastOrders) &&
-    value.roastOrders.every(isRoastOrder)
-  )
-}
-
-function dateAfterDays(date: Date, days: number) {
-  const result = new Date(date)
-  result.setDate(result.getDate() + days)
-  return result.toISOString().slice(0, 10)
-}
+const InventoryContext = createContext<InventoryContext | null>(null)
+const num = (value: unknown) => { const parsed = Number(value ?? 0); return Number.isFinite(parsed) ? parsed : 0 }
 
 export function RoasteryDemoProvider({ children }: { children: React.ReactNode }) {
-  const [greenLots, setGreenLots] = useState(initialGreenLots)
-  const [roastedLots, setRoastedLots] = useState(initialRoastedLots)
-  const [roastOrders, setRoastOrders] = useState(initialRoastOrders)
+  const [greenLots, setGreenLots] = useState<GreenCoffeeLot[]>([])
+  const [roastedLots, setRoastedLots] = useState<RoastedCoffeeLot[]>([])
+  const [roastOrders, setRoastOrders] = useState<RoastOrder[]>([])
+  const [origins, setOrigins] = useState<Origin[]>([])
+  const [suppliers, setSuppliers] = useState<Supplier[]>([])
+  const [roastProfiles, setRoastProfiles] = useState<RoastProfile[]>([])
+  const [customers, setCustomers] = useState<Customer[]>([])
+  const [presentations, setPresentations] = useState<Presentation[]>([])
+  const [grindingTypes, setGrindingTypes] = useState<GrindingType[]>([])
+  const [stockRows, setStockRows] = useState<StockRow[]>([])
+  const [alerts, setAlerts] = useState<AlertRow[]>([])
+  const [expirySummary, setExpirySummary] = useState<ExpirySummary>({ activos: 0, porVencer: 0, vencidos: 0 })
   const [isReady, setIsReady] = useState(false)
   const [storageError, setStorageError] = useState<string | null>(null)
 
-  useEffect(() => {
+  const refresh = useCallback(async () => {
+    setIsReady(false)
     try {
-      const stored = window.localStorage.getItem(STORAGE_KEY)
-      if (stored) {
-        const parsed: unknown = JSON.parse(stored)
-        if (isStoredInventory(parsed)) {
-          setGreenLots(parsed.greenLots)
-          setRoastedLots(parsed.roastedLots)
-          setRoastOrders(parsed.roastOrders)
-        } else {
-          setStorageError('Los datos de la demo no son válidos. Reiniciá la información para continuar.')
-        }
-      }
-    } catch {
-      setStorageError('No se pudo leer la demo guardada en este navegador.')
-    } finally {
-      setIsReady(true)
-    }
+      const [green, roasted, orders, originList, supplierList, profileList, clientList, presentationList, grindingList, stock, alertList, expiry] = await Promise.all([
+        apiGet<any[]>('/api/lotes-verdes'), apiGet<any[]>('/api/lotes-tostados'), apiGet<any[]>('/api/ordenes-tueste'), apiGet<any[]>('/api/origenes'), apiGet<any[]>('/api/proveedores'), apiGet<any[]>('/api/perfiles-tueste'), apiGet<any[]>('/api/clientes'), apiGet<any[]>('/api/presentaciones'), apiGet<any[]>('/api/tipos-molienda'), apiGet<any[]>('/api/origenes/stock'), apiGet<any[]>('/api/alertas'), apiGet<any>('/api/caducidad/resumen'),
+      ])
+      setGreenLots(green.map((row) => ({ id: `VG-${row.idLoteVerde}`, numericId: row.idLoteVerde, code: row.codigoLote, origin: row.origen, supplier: row.proveedor, purchaseDate: row.fechaIngreso, stockGrams: num(row.stockActualGramos), initialGrams: num(row.pesoInicialGramos) })))
+      setRoastedLots(roasted.map((row) => ({ id: row.codigoLote ?? `LT-${row.idLoteTostado}`, numericId: row.idLoteTostado, code: row.codigoLote, origin: `${row.pais} ${row.region} · ${row.variedad}`, profile: row.perfilTueste, roastDate: row.fechaTueste?.slice(0, 10) ?? '', availableDate: row.fechaDisponibleVenta?.slice(0, 10) ?? '', expirationDate: row.fechaCaducidad ?? '', stockGrams: num(row.stockDisponibleGramos), availableForSale: row.disponibleParaVenta, freshness: row.estadoFrescura })))
+      setRoastOrders(orders.map((row) => ({ id: row.codigoLoteTostado ?? `OT-${row.idOrdenTueste}`, numericId: row.idOrdenTueste, lotId: row.codigoLoteTostado ?? '', origin: row.origen, profile: row.perfilTueste, greenInputGrams: num(row.pesoVerdeUsadoGramos), roastedOutputGrams: num(row.pesoTostadoObtenidoGramos), lossPercent: num(row.mermaRealPct), createdAt: row.fechaHoraTueste, operator: row.operadorTostador })))
+      setOrigins(originList.map((row) => ({ ...row, stockMinimoAlertaGramos: num(row.stockMinimoAlertaGramos) })))
+      setSuppliers(supplierList)
+      setRoastProfiles(profileList.map((row) => ({ ...row, tempObjetivoC: num(row.tempObjetivoC), tiempoTuesteMin: Number(row.tiempoTuesteMin ?? 0), mermaEsperadaPct: num(row.mermaEsperadaPct), horasReposoMinimas: Number(row.horasReposoMinimas ?? 0) })))
+      setCustomers(clientList.map((row) => ({ ...row, limiteCredito: num(row.limiteCredito), plazoCtaCteDias: Number(row.plazoCtaCteDias ?? 0) })))
+      setPresentations(presentationList.map((row) => ({ ...row, pesoGramos: num(row.pesoGramos) })))
+      setGrindingTypes(grindingList)
+      setStockRows(stock.map((row) => ({ ...row, stockActualGramos: num(row.stockActualGramos), stockMinimoGramos: num(row.stockMinimoGramos) })))
+      setAlerts(alertList.map((row) => ({ ...row, stockActualGramos: num(row.stockActualGramos), stockMinimoGramos: num(row.stockMinimoGramos), consumoDiarioGramos: row.consumoDiarioGramos == null ? null : num(row.consumoDiarioGramos), diasEstimados: row.diasEstimados == null ? null : Number(row.diasEstimados) })))
+      setExpirySummary(expiry)
+      setStorageError(null)
+    } catch (error) { setStorageError(error instanceof Error ? error.message : 'No se pudo conectar con el backend.') }
+    finally { setIsReady(true) }
   }, [])
 
-  useEffect(() => {
-    if (!isReady) return
+  useEffect(() => { void refresh() }, [refresh])
 
-    try {
-      window.localStorage.setItem(
-        STORAGE_KEY,
-        JSON.stringify({ greenLots, roastedLots, roastOrders }),
-      )
-    } catch {
-      setStorageError('No se pudo guardar la demo. Los cambios podrían perderse al cerrar el navegador.')
-    }
-  }, [greenLots, isReady, roastOrders, roastedLots])
-
-  function recordPurchase(purchase: PurchaseInput) {
-    if (
-      !isReady ||
-      !purchase.origin.trim() ||
-      !purchase.region.trim() ||
-      !purchase.variety.trim() ||
-      !purchase.supplier.trim() ||
-      !purchase.purchaseDate ||
-      !Number.isFinite(purchase.amountGrams) ||
-      purchase.amountGrams <= 0
-    ) {
-      return false
-    }
-
-    const id = `VG-${Date.now().toString().slice(-6)}`
-    setGreenLots((current) => [
-      {
-        id,
-        ...purchase,
-        origin: purchase.origin.trim(),
-        region: purchase.region.trim(),
-        variety: purchase.variety.trim(),
-        supplier: purchase.supplier.trim(),
-        stockGrams: purchase.amountGrams,
-        minimumGrams: Math.min(purchase.amountGrams, 10_000),
-      },
-      ...current,
-    ])
-    return true
+  async function recordPurchase(purchase: PurchaseInput) {
+    const row = await apiPost<any>('/api/lotes-verdes', purchase)
+    await refresh()
+    return { id: `VG-${row.idLoteVerde}`, numericId: row.idLoteVerde, code: row.codigoLote, origin: row.origen, supplier: row.proveedor, purchaseDate: row.fechaIngreso, stockGrams: num(row.stockActualGramos), initialGrams: num(row.pesoInicialGramos) }
   }
-
-  function recordRoast(order: RoastInput) {
-    const greenLot = greenLots.find((lot) => lot.id === order.greenLotId)
-    if (
-      !isReady ||
-      !greenLot ||
-      !order.profile.trim() ||
-      !Number.isFinite(order.inputGrams) ||
-      order.inputGrams <= 0 ||
-      order.inputGrams > greenLot.stockGrams ||
-      !Number.isFinite(order.lossPercent) ||
-      order.lossPercent < 0 ||
-      order.lossPercent >= 100 ||
-      !Number.isInteger(order.restingDays) ||
-      order.restingDays < 0
-    ) {
-      return false
-    }
-
-    const now = new Date()
-    const roastDate = now.toISOString().slice(0, 10)
-    const originLabel = `${greenLot.origin} ${greenLot.region} · ${greenLot.variety}`
-    const roastedOutputGrams = Math.round(order.inputGrams * (1 - order.lossPercent / 100))
-    const id = `OT-${Date.now().toString().slice(-6)}`
-
-    setGreenLots((current) =>
-      current.map((lot) =>
-        lot.id === greenLot.id ? { ...lot, stockGrams: lot.stockGrams - order.inputGrams } : lot,
-      ),
-    )
-    setRoastedLots((current) => [
-      {
-        id: `LT-${Date.now().toString().slice(-6)}`,
-        origin: originLabel,
-        profile: order.profile,
-        roastDate,
-        availableDate: dateAfterDays(now, order.restingDays),
-        expirationDate: dateAfterDays(now, 30),
-        stockGrams: roastedOutputGrams,
-      },
-      ...current,
-    ])
-    setRoastOrders((current) => [
-      {
-        id,
-        origin: originLabel,
-        profile: order.profile,
-        greenInputGrams: order.inputGrams,
-        roastedOutputGrams,
-        lossPercent: order.lossPercent,
-        restingDays: order.restingDays,
-        createdAt: now.toISOString(),
-      },
-      ...current,
-    ])
-    return true
+  async function recordRoast(order: RoastInput) {
+    const row = await apiPost<any>('/api/ordenes-tueste', order)
+    await refresh()
+    return { id: row.codigoLoteTostado ?? `OT-${row.idOrdenTueste}`, numericId: row.idOrdenTueste, lotId: row.codigoLoteTostado ?? '', origin: row.origen, profile: row.perfilTueste, greenInputGrams: num(row.pesoVerdeUsadoGramos), roastedOutputGrams: num(row.pesoTostadoObtenidoGramos), lossPercent: num(row.mermaRealPct), createdAt: row.fechaHoraTueste, operator: row.operadorTostador }
   }
-
-  function recordCustomerOrder(order: CustomerOrderInput) {
-    const lot = roastedLots.find((current) => current.id === order.roastedLotId)
-    if (
-      !isReady ||
-      !lot ||
-      !Number.isFinite(order.quantityGrams) ||
-      order.quantityGrams <= 0 ||
-      order.quantityGrams > lot.stockGrams
-    ) {
-      return false
-    }
-
-    setRoastedLots((current) =>
-      current.map((currentLot) =>
-        currentLot.id === lot.id
-          ? { ...currentLot, stockGrams: currentLot.stockGrams - order.quantityGrams }
-          : currentLot,
-      ),
-    )
-    return true
-  }
-
-  function resetDemo() {
-    setGreenLots(initialGreenLots)
-    setRoastedLots(initialRoastedLots)
-    setRoastOrders(initialRoastOrders)
-    setStorageError(null)
-  }
-
-  return (
-    <DemoInventoryContext.Provider
-      value={{
-        greenLots,
-        roastedLots,
-        roastOrders,
-        isReady,
-        storageError,
-        recordPurchase,
-        recordRoast,
-        recordCustomerOrder,
-        resetDemo,
-      }}
-    >
-      {children}
-    </DemoInventoryContext.Provider>
-  )
+  function recordCustomerOrder() { return false }
+  return <InventoryContext.Provider value={{ greenLots, roastedLots, roastOrders, origins, suppliers, roastProfiles, customers, presentations, grindingTypes, stockRows, alerts, expirySummary, isReady, storageError, refresh, recordPurchase, recordRoast, recordCustomerOrder }}>{children}</InventoryContext.Provider>
 }
 
-export function useRoasteryDemo() {
-  const context = useContext(DemoInventoryContext)
-  if (!context) {
-    throw new Error('useRoasteryDemo debe usarse dentro de RoasteryDemoProvider.')
-  }
-  return context
-}
+export function useRoasteryDemo() { const context = useContext(InventoryContext); if (!context) throw new Error('useRoasteryDemo debe usarse dentro de RoasteryDemoProvider.'); return context }

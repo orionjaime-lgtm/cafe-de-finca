@@ -76,6 +76,42 @@
   --sidebar-ring: #6b4c3a;
 }
 
+html[data-font-size='small'] {
+  font-size: 14px;
+}
+
+html[data-font-size='medium'] {
+  font-size: 16px;
+}
+
+html[data-font-size='large'] {
+  font-size: 18px;
+}
+
+html.dark {
+  color-scheme: dark;
+  --background: #171412;
+  --foreground: #f4f0ea;
+  --card: #211e1b;
+  --card-foreground: #f4f0ea;
+  --popover: #211e1b;
+  --popover-foreground: #f4f0ea;
+  --primary: #c08a63;
+  --primary-foreground: #171412;
+  --secondary: #2b2723;
+  --secondary-foreground: #f4f0ea;
+  --muted: #2b2723;
+  --muted-foreground: #aaa29a;
+  --accent: #e49a70;
+  --accent-foreground: #171412;
+  --destructive: #ef4444;
+  --warning: #f59e0b;
+  --success: #22c55e;
+  --border: #37312c;
+  --input: #37312c;
+  --ring: #c08a63;
+}
+
 @layer base {
   * {
     @apply border-border outline-ring/50;

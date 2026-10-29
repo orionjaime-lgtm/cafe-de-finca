@@ -9,26 +9,36 @@ import {
   Leaf,
   Package,
   Settings,
+  ShoppingBag,
   ShoppingCart,
   Wallet,
+  Users,
   type LucideIcon,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { useRoasteryDemo } from '@/components/dashboard/roastery-demo-provider'
+import { useAuth } from '@/components/auth-provider'
 
-type NavItem = { label: string; icon: LucideIcon; href: string; badge?: number }
+type NavItem = { label: string; icon: LucideIcon; href: string; badge?: number; roles?: ('admin' | 'cliente')[] }
 
 const navItems: NavItem[] = [
-  { label: 'Inventario', icon: Package, href: '/inventario' },
-  { label: 'Tueste', icon: Flame, href: '/tueste' },
-  { label: 'Pedidos', icon: ShoppingCart, href: '/pedidos' },
-  { label: 'Cobros', icon: Wallet, href: '/cobros' },
-  { label: 'Alertas', icon: Bell, href: '/', badge: 3 },
-  { label: 'Caducidad', icon: CalendarClock, href: '/caducidad' },
-  { label: 'Configuración', icon: Settings, href: '#' },
+  { label: 'Inventario', icon: Package, href: '/inventario', roles: ['admin'] },
+  { label: 'Tueste', icon: Flame, href: '/tueste', roles: ['admin'] },
+  { label: 'Mis Compras', icon: ShoppingBag, href: '/compras', roles: ['cliente'] },
+  { label: 'Pedidos', icon: ShoppingCart, href: '/pedidos', roles: ['admin'] },
+  { label: 'Clientes', icon: Users, href: '/clientes', roles: ['admin'] },
+  { label: 'Cobros', icon: Wallet, href: '/cobros', roles: ['admin', 'cliente'] },
+  { label: 'Alertas', icon: Bell, href: '/', roles: ['admin'] },
+  { label: 'Caducidad', icon: CalendarClock, href: '/caducidad', roles: ['admin'] },
+  { label: 'Configuración', icon: Settings, href: '/configuracion', roles: ['admin', 'cliente'] },
 ]
 
 export function AppSidebar() {
   const pathname = usePathname()
+  const { alerts, isReady } = useRoasteryDemo()
+  const { user } = useAuth()
+  const alertBadge = isReady ? alerts.length : undefined
+  const visibleNavItems = navItems.filter((item) => !item.roles || item.roles.includes(user?.role ?? 'cliente'))
 
   return (
     <aside className="sticky top-0 hidden h-screen w-64 shrink-0 flex-col bg-sidebar px-4 py-6 lg:flex">
@@ -45,8 +55,9 @@ export function AppSidebar() {
       <nav aria-label="Operaciones" className="mt-10 flex-1">
         <p className="px-3 text-[11px] font-medium tracking-[0.12em] text-stone-500">OPERACIONES</p>
         <ul className="mt-3 flex flex-col gap-1">
-          {navItems.map(({ label, icon: Icon, href, badge }) => {
+          {visibleNavItems.map(({ label, icon: Icon, href, badge: itemBadge }) => {
             const active = href !== '#' && pathname === href
+            const badge = label === 'Alertas' ? alertBadge : itemBadge
             return (
             <li key={label}>
               <Link

@@ -19,7 +19,7 @@ export function B2cSales() {
           <li key={`${sale.customer}-${sale.product}`} className="flex items-center gap-3 py-3.5 first:pt-0">
             <span
               aria-hidden="true"
-              className="flex size-9 shrink-0 items-center justify-center rounded-full bg-[#fbd9c2] text-xs font-semibold text-[#9a3f12]"
+              className="flex size-9 shrink-0 items-center justify-center rounded-full bg-secondary text-xs font-semibold text-primary"
             >
               {sale.customer.charAt(0)}
             </span>
@@ -30,7 +30,7 @@ export function B2cSales() {
               </p>
               <p className="mt-0.5 text-xs text-muted-foreground">Medio de pago: {sale.method}</p>
             </div>
-            <span className="inline-flex shrink-0 items-center gap-1.5 rounded-md border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-xs font-semibold text-emerald-700">
+            <span className="inline-flex shrink-0 items-center gap-1.5 rounded-md border border-success/20 bg-success/10 px-2 py-0.5 text-xs font-semibold text-success dark:text-green-300">
               <CheckCircle2 className="size-3.5" aria-hidden="true" />
               <span className="sr-only">Estado: </span>Pagado
             </span>

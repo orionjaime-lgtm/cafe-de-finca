@@ -10,6 +10,7 @@ El backend de Café de Finca se generó con una IA (Claude Code) y fue verificad
 | 4. Corrección y entrega del punto 1 | Programador senior | Resolver las decisiones abiertas, corregir el comentario del test y subir la rama. |
 | 5. Implementación del punto 2 | Programador senior, luego QA | Decidir las ramas, implementar catálogos y lotes verdes, y después revisar el resultado. |
 | 6. Verificación con la base real | QA tester | Probar la base con datos reales, revisar lo implementado y subir la rama solo si todo está correcto. |
+| 7. Implementación de pedidos | Programador backend | Agregar entidades y catálogos de venta, registrar pedidos transaccionales, facturas B2B y pruebas de stock/reposo/caducidad. |
 
 ---
 
@@ -141,3 +142,16 @@ acordarte que tu rol ahora es de QA tester
 ```
 
 **Resultado:** con la base encendida, la suite completa pasó (62 de 62 pruebas) y los endpoints respondieron como se esperaba. Se probaron 16 casos del `POST`, incluidos los de error. La rama se subió solo después de verificarla.
+
+---
+
+## Prompt 7: pedidos, facturas y catálogos de venta
+
+```text
+Implementar las entidades Pedido, DetallePedido, Factura, Pago, MedioPago y CanalVenta,
+los GET /api/canales-venta y GET /api/medios-pago, el POST /api/pedidos con descuento
+transaccional del stock, factura B2B con vencimiento y tests para stock justo, insuficiente,
+lote vencido y lote en reposo. No modificar el esquema SQL.
+```
+
+**Decisiones confirmadas:** el pedido usa exactamente el `loteTostadoId` que llega en cada ítem, sin reasignarlo a otro lote; las facturas se crean como `Factura A` con numeración correlativa interna.

@@ -222,6 +222,38 @@ Registrar un tueste hace tres cosas **en una sola transacción**: descuenta el c
 - **Dos tuestes a la vez sobre el mismo lote verde** se hacen de a uno: el lote se bloquea durante la transacción, así el stock nunca se descuenta de más.
 - Errores: `409` "Stock insuficiente: hay X g disponibles y se pidieron Y g." si el verde no alcanza; `400` si falta un dato, la unidad no existe, el lote o el perfil no existen, o el tostado pesa más que el verde.
 
+### Backend: pedidos y catálogos de venta
+
+| Endpoint | Qué hace |
+|---|---|
+| `GET /api/canales-venta` | Devuelve los canales de venta disponibles. |
+| `GET /api/medios-pago` | Devuelve los medios de pago disponibles. |
+| `POST /api/pedidos` | Crea un pedido, sus detalles y, para clientes B2B, una factura simple. Responde `201`. |
+
+Cuerpo del `POST /api/pedidos`:
+
+```json
+{
+  "clienteId": 1,
+  "canalVentaId": 2,
+  "items": [
+    {
+      "loteTostadoId": 1,
+      "presentacionId": 2,
+      "tipoMoliendaId": 1,
+      "cantidadEnvases": 2,
+      "precioUnitario": 12000.00
+    }
+  ]
+}
+```
+
+- El peso de cada detalle es `cantidadEnvases × presentacion.peso_gramos`; el subtotal es `cantidadEnvases × precioUnitario`. Los importes se calculan con `BigDecimal`.
+- Se utiliza el `loteTostadoId` enviado en cada ítem; no se sustituye por otro lote. El lote tiene que haber terminado el reposo, no estar vencido y tener stock disponible. Si se piden más gramos que los disponibles, responde `409` con "Stock insuficiente" y no guarda el pedido ni modifica el stock.
+- El descuento de stock, el pedido, sus detalles y la factura se procesan en una única transacción. Los lotes solicitados se bloquean durante la operación para evitar descuentos concurrentes.
+- Para clientes B2B se genera una factura simple de tipo `Factura A`, con número correlativo de cuatro dígitos y vencimiento según `plazo_cta_cte_dias`. La numeración se protege frente a pedidos simultáneos; no es una integración con AFIP.
+- La respuesta contiene el pedido, sus detalles y la factura (`null` para B2C). Los pagos se registran por separado.
+
 > El backend se generó con IA y fue verificado por el equipo. Los prompts utilizados están en [`docs/uso-de-ia.md`](docs/uso-de-ia.md).
 
 ### Cómo está organizado el código
@@ -231,12 +263,13 @@ Siguiendo la convención del punto 3, cada endpoint pasa por las mismas capas:
 ```
 backend/src/main/java/com/cafedefinca/backend/
 ├── controller/   ClienteController, CatalogoController, LoteTostadoController,
-│                 CaducidadController, AlertaController, OrigenController
+│                 CaducidadController, AlertaController, OrigenController, PedidoController
 ├── service/      ClienteService, CatalogoService, LoteTostadoService,
-│                 CaducidadService, AlertaService, OrigenService
+│                 CaducidadService, AlertaService, OrigenService, PedidoService
 ├── repository/   una interfaz por tabla (Spring arma el SQL)
 ├── entity/       una clase por tabla usada: cliente, presentacion, tipo_molienda,
-│                 origen_cafe, lote_cafe_verde, perfil_tueste, orden_tueste, lote_cafe_tostado
+│                 origen_cafe, lote_cafe_verde, perfil_tueste, orden_tueste, lote_cafe_tostado,
+│                 canal_venta, medio_pago, pedido, detalle_pedido, factura, pago
 ├── dto/          lo que viaja al frontend (records de Java)
 ├── enums/        EstadoFrescura, EstadoStock, NivelAlerta
 ├── exception/    errores en JSON claro (ManejadorGlobalErrores)

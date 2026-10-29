@@ -1,5 +1,6 @@
 package com.cafedefinca.backend.entity;
 
+import com.cafedefinca.backend.exception.StockInsuficienteException;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
@@ -130,5 +131,18 @@ public class LoteCafeTostado {
 
 	public String getEstadoDisponibilidad() {
 		return estadoDisponibilidad;
+	}
+
+	// ---------------------------------------------------------------------
+	// MÉTODO DE NEGOCIO: DESCONTAR STOCK DISPONIBLE
+	// ---------------------------------------------------------------------
+	public void descontarStockDisponible(BigDecimal gramos) {
+		if (gramos.compareTo(stockDisponibleGramos) > 0) {
+			throw new StockInsuficienteException(stockDisponibleGramos, gramos);
+		}
+		stockDisponibleGramos = stockDisponibleGramos.subtract(gramos);
+		if (stockDisponibleGramos.add(stockReservadoGramos).compareTo(BigDecimal.ZERO) == 0) {
+			estadoDisponibilidad = "AGOTADO";
+		}
 	}
 }

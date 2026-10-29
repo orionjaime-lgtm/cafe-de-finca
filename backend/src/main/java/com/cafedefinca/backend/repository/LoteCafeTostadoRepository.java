@@ -1,7 +1,9 @@
 package com.cafedefinca.backend.repository;
 
 import com.cafedefinca.backend.entity.LoteCafeTostado;
+import jakarta.persistence.LockModeType;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
@@ -27,6 +29,11 @@ public interface LoteCafeTostadoRepository extends JpaRepository<LoteCafeTostado
 			ORDER BY l.fechaHoraFinTueste ASC
 			""")
 	List<LoteCafeTostado> buscarEnInventario();
+
+	// Bloquea todos los lotes solicitados en orden estable para evitar descuentos concurrentes y deadlocks.
+	@Lock(LockModeType.PESSIMISTIC_WRITE)
+	@Query("SELECT l FROM LoteCafeTostado l WHERE l.idLoteTostado IN :ids ORDER BY l.idLoteTostado")
+	List<LoteCafeTostado> buscarPorIdsConBloqueo(@Param("ids") Collection<Integer> ids);
 
 	// Lotes tostados que nacieron de las órdenes indicadas (para mostrar el código en el listado de órdenes)
 	@Query("SELECT l FROM LoteCafeTostado l WHERE l.ordenTueste.idOrdenTueste IN :ids")

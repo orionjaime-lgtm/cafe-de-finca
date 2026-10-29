@@ -19,8 +19,9 @@ Es el trabajo de **Prácticas Pre-Profesionales** de un equipo de 4 personas, co
 | Parte                                                                                                                                     | Estado                                                          |
 | ----------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------- |
 | Base de datos (19 tablas, datos base y de prueba)                                                                                         | Hecha                                                           |
-| Backend: 7 endpoints `GET` (clientes, presentaciones, tipos de molienda, lotes tostados, resumen de caducidad, alertas, stock por origen) | Hecho, con tests                                                |
-| Backend: producción, pedidos, cobros, suscripciones, hojas de ruta                                                                        | **Pendiente**                                                   |
+| Backend: catálogos y consultas de stock/producción                                                                                       | Hecho, con tests                                                |
+| Backend: pedidos (entidades, catálogos de venta y `POST /api/pedidos`)                                                                   | Hecho, con tests                                                |
+| Backend: pagos, suscripciones y hojas de ruta                                                                                            | **Pendiente**                                                   |
 | Frontend: 6 pantallas (Alertas, Inventario, Tueste, Pedidos, Cobros, Caducidad)                                                           | Hechas con **datos de ejemplo**; todavía **no llaman a la API** |
 | Login con roles, configuración, compras de clientes, suscripción con descuento                                                            | **Pendiente** (ver sección 9)                                   |
 

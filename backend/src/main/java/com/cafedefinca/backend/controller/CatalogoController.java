@@ -2,6 +2,8 @@ package com.cafedefinca.backend.controller;
 
 import com.cafedefinca.backend.dto.PresentacionDto;
 import com.cafedefinca.backend.dto.TipoMoliendaDto;
+import com.cafedefinca.backend.dto.CanalVentaDto;
+import com.cafedefinca.backend.dto.MedioPagoDto;
 import com.cafedefinca.backend.service.CatalogoService;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -42,5 +44,21 @@ public class CatalogoController {
 	@GetMapping("/tipos-molienda")
 	public List<TipoMoliendaDto> listarTiposMolienda() {
 		return catalogoService.listarTiposMolienda();
+	}
+
+	// ---------------------------------------------------------------------
+	// GET /api/canales-venta -> canales disponibles para crear pedidos
+	// ---------------------------------------------------------------------
+	@GetMapping("/canales-venta")
+	public List<CanalVentaDto> listarCanalesVenta() {
+		return catalogoService.listarCanalesVenta();
+	}
+
+	// ---------------------------------------------------------------------
+	// GET /api/medios-pago -> medios disponibles para registrar cobros
+	// ---------------------------------------------------------------------
+	@GetMapping("/medios-pago")
+	public List<MedioPagoDto> listarMediosPago() {
+		return catalogoService.listarMediosPago();
 	}
 }

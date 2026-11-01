@@ -1,3 +1,7 @@
+-- =====================================================================
+-- Café de Finca - Datos base (catálogos que el sistema necesita para funcionar)
+-- Se puede ejecutar más de una vez sin duplicar datos.
+-- =====================================================================
 
 -- Presentaciones (el peso en gramos es la base de toda conversión)
 INSERT INTO presentacion (nombre_envase, peso_gramos) VALUES
@@ -38,6 +42,13 @@ INSERT INTO perfil_tueste (nombre_perfil, temp_objetivo_c, tiempo_tueste_min, me
     ('Tueste Medio', 205.00, 12, 15.00, 48),
     ('Tueste Oscuro', 215.00, 14, 18.00, 72)
 ON CONFLICT (nombre_perfil) DO NOTHING;
+
+-- Planes de membresía (suscripción de clientes con descuento)
+INSERT INTO plan_membresia (nombre_plan, porcentaje_descuento, descripcion) VALUES
+    ('Plan Básico', 5.00, 'Descuento del 5 % en todas las compras'),
+    ('Plan Plus', 10.00, 'Descuento del 10 % en todas las compras'),
+    ('Plan Premium', 15.00, 'Descuento del 15 % en todas las compras')
+ON CONFLICT (nombre_plan) DO NOTHING;
 
 -- Cliente genérico para ventas de mostrador sin datos del comprador
 INSERT INTO cliente (tipo_cliente, nombre_razon_social, cuit_o_dni, condicion_iva)

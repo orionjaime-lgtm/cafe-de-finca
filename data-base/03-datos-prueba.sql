@@ -1,3 +1,10 @@
+-- =====================================================================
+-- Café de Finca - Datos de PRUEBA (ficticios, solo para desarrollo y demo)
+-- Las fechas son relativas a la fecha en que se crea la base, así la
+-- caducidad y las deudas siempre se ven coherentes.
+-- Requiere 01-schema.sql y 02-datos-iniciales.sql ya ejecutados.
+-- =====================================================================
+
 -- ---------------------------------------------------------------------
 -- ORÍGENES (stock mínimo en gramos)
 -- ---------------------------------------------------------------------
@@ -49,7 +56,11 @@ JOIN lote_cafe_verde lv ON lv.codigo_lote = v.cod_verde
 JOIN perfil_tueste pt ON pt.nombre_perfil = v.perfil;
 
 -- ---------------------------------------------------------------------
--- LOTES DE CAFÉ TOSTADO
+-- LOTES DE CAFÉ TOSTADO (vida útil de 30 días desde el tueste)
+--   LT-1082: fresco | LT-1079: fresco | LT-1055: por vencer (4 días)
+--   LT-1041: VENCIDO | LT-1090: en reposo (aún no se puede vender)
+--   LT-1091: fresco
+-- stock_disponible ya descuenta las ventas de más abajo.
 -- ---------------------------------------------------------------------
 INSERT INTO lote_cafe_tostado (id_orden_tueste, codigo_lote_tostado, fecha_hora_fin_tueste, fecha_disponible_venta, fecha_caducidad, peso_inicial_gramos, stock_disponible_gramos, stock_reservado_gramos, estado_disponibilidad)
 SELECT ot.id_orden_tueste,
@@ -74,7 +85,7 @@ JOIN orden_tueste ot ON ot.id_lote_verde = lv.id_lote_verde
                     AND ot.fecha_hora_tueste = (CURRENT_DATE - v.dias) + TIME '10:30';
 
 -- ---------------------------------------------------------------------
--- CLIENTES B2B
+-- CLIENTES (B2B con domicilio; el cliente "Consumidor Final" ya está en 02)
 -- ---------------------------------------------------------------------
 INSERT INTO cliente (tipo_cliente, nombre_razon_social, cuit_o_dni, condicion_iva, plazo_cta_cte_dias, limite_credito, contacto_wp_ig, domicilio, localidad) VALUES
     ('B2B', 'Café Cortázar S.A.S.', '30-71234567-8', 'Responsable Inscripto', 30, 500000, '@cafecortazar', 'Av. Hipólito Yrigoyen 4120', 'Lanús'),
@@ -97,6 +108,7 @@ DECLARE
     h1 INT; h2 INT; h3 INT;
     p1 INT; p2 INT; p3 INT; p4 INT; p5 INT;
     s1 INT; s2 INT; s3 INT;
+    pl_plus INT; pl_premium INT;
 BEGIN
     SELECT id_cliente INTO c_cortazar  FROM cliente WHERE nombre_razon_social = 'Café Cortázar S.A.S.';
     SELECT id_cliente INTO c_panaderia FROM cliente WHERE nombre_razon_social = 'La Panadería Central';
@@ -164,14 +176,21 @@ BEGIN
     INSERT INTO pago (id_pedido, id_medio_pago, fecha_hora_pago, monto_pagado)
     VALUES (p4, mp_qr, CURRENT_TIMESTAMP - INTERVAL '2 hours', 9500);
 
-    -- B2C 2: Camila en el mostrador, efectivo
-    INSERT INTO pedido (id_cliente, id_canal_venta, fecha_hora_pedido, fecha_entrega_prevista, estado_preparacion, estado_cobro, monto_total)
-    VALUES (c_camila, ch_mostrador, CURRENT_TIMESTAMP - INTERVAL '1 hour', CURRENT_DATE, 'ENTREGADO', 'PAGADO', 32000)
+    -- B2C 2: Camila en el mostrador, efectivo, con el descuento del Plan Plus (10 %: $32.000 - $3.200 = $28.800)
+    INSERT INTO pedido (id_cliente, id_canal_venta, fecha_hora_pedido, fecha_entrega_prevista, estado_preparacion, estado_cobro, monto_total, porcentaje_descuento, monto_descuento)
+    VALUES (c_camila, ch_mostrador, CURRENT_TIMESTAMP - INTERVAL '1 hour', CURRENT_DATE, 'ENTREGADO', 'PAGADO', 28800, 10.00, 3200)
     RETURNING id_pedido INTO p5;
     INSERT INTO detalle_pedido (id_pedido, id_lote_tostado, id_presentacion, id_tipo_molienda, cantidad_envases, peso_total_gramos, precio_unitario, subtotal)
     VALUES (p5, l_1091, pr_1k, mo_espresso, 1, 1000, 32000, 32000);
     INSERT INTO pago (id_pedido, id_medio_pago, fecha_hora_pago, monto_pagado)
-    VALUES (p5, mp_efectivo, CURRENT_TIMESTAMP - INTERVAL '1 hour', 32000);
+    VALUES (p5, mp_efectivo, CURRENT_TIMESTAMP - INTERVAL '1 hour', 28800);
+
+    -- Membresías (suscripción con descuento): Camila (B2C, Plan Plus) y Hotel Andino (B2B, Plan Premium).
+    -- Lucas no tiene membresía: sirve para mostrar el aviso "si estuvieras suscripto...".
+    SELECT id_plan INTO pl_plus    FROM plan_membresia WHERE nombre_plan = 'Plan Plus';
+    SELECT id_plan INTO pl_premium FROM plan_membresia WHERE nombre_plan = 'Plan Premium';
+    INSERT INTO membresia_cliente (id_cliente, id_plan, fecha_inicio) VALUES (c_camila, pl_plus, CURRENT_DATE - 30);
+    INSERT INTO membresia_cliente (id_cliente, id_plan, fecha_inicio) VALUES (c_hotel, pl_premium, CURRENT_DATE - 60);
 
     -- Suscripciones. proxima_fecha_generacion = hoy, para poder probar el generador.
     -- dia_entrega se calcula para que coincida con la fecha de hoy.
@@ -198,3 +217,20 @@ BEGIN
     INSERT INTO detalle_suscripcion (id_suscripcion, id_presentacion, id_tipo_molienda, cantidad_envases, precio_unitario)
     VALUES (s3, pr_5k, mo_filtro, 1, 85000);
 END $$;
+
+-- ---------------------------------------------------------------------
+-- USUARIOS DE DEMOSTRACIÓN (solo desarrollo)
+-- Contraseña de todas las cuentas: cafe1234  (se guarda como hash BCrypt)
+-- ---------------------------------------------------------------------
+INSERT INTO usuario (email, password_hash, nombre, rol, id_cliente) VALUES
+    ('admin@cafedefinca.com',    '$2b$10$4O/hpDC8fO4hF6j0OxBDweVPAeNX3U1yKvxnmIGcmNPGPT8.lf3dC', 'Administrador', 'ADMIN', NULL),
+    ('tueste@cafedefinca.com',   '$2b$10$vAE71jT2UGLKhtUEUFk6cea4KcWWRRhlZ/ISr1Cf3jVve6Xcmoloq', 'Mateo (tueste)', 'TUESTE', NULL),
+    ('vendedor@cafedefinca.com', '$2b$10$7BdyWK8NWYM4FVAIMHDryOSb6VKHqby4mXtMMDs028Mmhq9pVqiXW', 'Vendedor de mostrador', 'VENDEDOR', NULL);
+
+INSERT INTO usuario (email, password_hash, nombre, rol, id_cliente)
+SELECT v.email, v.hash, c.nombre_razon_social, 'CLIENTE', c.id_cliente
+FROM (VALUES
+    ('camila@cafedefinca.com',   '$2b$10$8/j0pNuWR4OCAWuTR.komuyRmb4z4PhGQKfkEnyqmrTdLmL1CxTCe', 'Camila Vergara'),
+    ('cortazar@cafedefinca.com', '$2b$10$RBD7eXEggkhlrPJXUxigRO/Is116glaNaOx/5Du7Y0smidNC3MUQG', 'Café Cortázar S.A.S.')
+) AS v(email, hash, cliente)
+JOIN cliente c ON c.nombre_razon_social = v.cliente;

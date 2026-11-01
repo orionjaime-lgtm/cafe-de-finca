@@ -18,7 +18,7 @@ Es el trabajo de **Prácticas Pre-Profesionales** de un equipo de 4 personas, co
 
 | Parte                                                                                                                                     | Estado                                                          |
 | ----------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------- |
-| Base de datos (19 tablas, datos base y de prueba)                                                                                         | Hecha                                                           |
+| Base de datos (21 tablas, datos base y de prueba)                                                                                         | Hecha                                                           |
 | Backend: catálogos y consultas de stock/producción                                                                                       | Hecho, con tests                                                |
 | Backend: pedidos (entidades, catálogos de venta y `POST /api/pedidos`)                                                                   | Hecho, con tests                                                |
 | Backend: pagos, suscripciones y hojas de ruta                                                                                            | **Pendiente**                                                   |
@@ -135,7 +135,7 @@ Estas reglas no se negocian. Si una tarea parece exigir romperlas, pará y consu
 - Inicio de sesión con roles: administrador (todo), tueste, vendedor y cliente (solo compras).
 - Pantalla de configuración (modo oscuro, idioma).
 
-Estos cambios requieren tablas nuevas (`usuario`, planes de suscripción): **no las crees por tu cuenta**; pedí el cambio de esquema.
+Las tablas ya existen: usuario, plan_membresia y membresia_cliente, más las columnas porcentaje_descuento y monto_descuento en pedido. Los endpoints y las pantallas están pendientes.
 
 ## 10. Habilidades para IAs
 

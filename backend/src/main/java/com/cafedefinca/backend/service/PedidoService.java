@@ -2,6 +2,10 @@ package com.cafedefinca.backend.service;
 
 import com.cafedefinca.backend.dto.DetallePedidoDto;
 import com.cafedefinca.backend.dto.FacturaDto;
+import com.cafedefinca.backend.dto.AhorroPlanDto;
+import com.cafedefinca.backend.dto.CambioEstadoPreparacionDto;
+import com.cafedefinca.backend.dto.CotizacionPedidoDto;
+import com.cafedefinca.backend.dto.CotizarPedidoRequestDto;
 import com.cafedefinca.backend.dto.NuevoPedidoDto;
 import com.cafedefinca.backend.dto.NuevoPedidoItemDto;
 import com.cafedefinca.backend.dto.PedidoDto;
@@ -10,7 +14,9 @@ import com.cafedefinca.backend.entity.Cliente;
 import com.cafedefinca.backend.entity.DetallePedido;
 import com.cafedefinca.backend.entity.Factura;
 import com.cafedefinca.backend.entity.LoteCafeTostado;
+import com.cafedefinca.backend.entity.MembresiaCliente;
 import com.cafedefinca.backend.entity.Pedido;
+import com.cafedefinca.backend.entity.PlanMembresia;
 import com.cafedefinca.backend.entity.Presentacion;
 import com.cafedefinca.backend.entity.TipoMolienda;
 import com.cafedefinca.backend.exception.SolicitudInvalidaException;
@@ -20,13 +26,16 @@ import com.cafedefinca.backend.repository.ClienteRepository;
 import com.cafedefinca.backend.repository.DetallePedidoRepository;
 import com.cafedefinca.backend.repository.FacturaRepository;
 import com.cafedefinca.backend.repository.LoteCafeTostadoRepository;
+import com.cafedefinca.backend.repository.MembresiaClienteRepository;
 import com.cafedefinca.backend.repository.PedidoRepository;
+import com.cafedefinca.backend.repository.PlanMembresiaRepository;
 import com.cafedefinca.backend.repository.PresentacionRepository;
 import com.cafedefinca.backend.repository.TipoMoliendaRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.Clock;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -37,6 +46,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Set;
 import java.util.TreeSet;
 
 /**
@@ -51,6 +61,9 @@ public class PedidoService {
 	// ---------------------------------------------------------------------
 	private static final String TIPO_FACTURA = "Factura A";
 	private static final long CLAVE_CANDADO_FACTURAS = 7300002L;
+	private static final BigDecimal CIEN = new BigDecimal("100");
+	private static final Set<String> ESTADOS_PREPARACION = Set.of(
+			"PENDIENTE", "EN_PREPARACION", "LISTO", "ENTREGADO", "CANCELADO");
 
 	// ---------------------------------------------------------------------
 	// VARIABLES
@@ -61,6 +74,8 @@ public class PedidoService {
 	private final TipoMoliendaRepository tipoMoliendaRepository;
 	private final LoteCafeTostadoRepository loteTostadoRepository;
 	private final PedidoRepository pedidoRepository;
+	private final MembresiaClienteRepository membresiaRepository;
+	private final PlanMembresiaRepository planRepository;
 	private final DetallePedidoRepository detallePedidoRepository;
 	private final FacturaRepository facturaRepository;
 	private final Clock reloj;
@@ -74,6 +89,8 @@ public class PedidoService {
 			TipoMoliendaRepository tipoMoliendaRepository,
 			LoteCafeTostadoRepository loteTostadoRepository,
 			PedidoRepository pedidoRepository,
+			MembresiaClienteRepository membresiaRepository,
+			PlanMembresiaRepository planRepository,
 			DetallePedidoRepository detallePedidoRepository,
 			FacturaRepository facturaRepository,
 			Clock reloj) {
@@ -83,6 +100,8 @@ public class PedidoService {
 		this.tipoMoliendaRepository = tipoMoliendaRepository;
 		this.loteTostadoRepository = loteTostadoRepository;
 		this.pedidoRepository = pedidoRepository;
+		this.membresiaRepository = membresiaRepository;
+		this.planRepository = planRepository;
 		this.detallePedidoRepository = detallePedidoRepository;
 		this.facturaRepository = facturaRepository;
 		this.reloj = reloj;
@@ -107,12 +126,15 @@ public class PedidoService {
 
 		validarLotes(lotes, gramosPorLote, ahora, hoy);
 
-		BigDecimal montoTotal = items.stream()
+		BigDecimal subtotal = items.stream()
 				.map(ItemPreparado::subtotal)
 				.reduce(BigDecimal.ZERO, BigDecimal::add);
+		Descuento descuento = descuentoActual(cliente.getIdCliente(), hoy, subtotal);
+		BigDecimal montoTotal = subtotal.subtract(descuento.monto());
 
 		gramosPorLote.forEach((id, gramos) -> lotes.get(id).descontarStockDisponible(gramos));
-		Pedido pedido = pedidoRepository.saveAndFlush(new Pedido(cliente, canal, ahora, montoTotal));
+		Pedido pedido = pedidoRepository.saveAndFlush(new Pedido(
+				cliente, canal, ahora, montoTotal, descuento.porcentaje(), descuento.monto()));
 
 		List<DetallePedido> detalles = items.stream()
 				.map(item -> new DetallePedido(
@@ -140,6 +162,64 @@ public class PedidoService {
 		}
 
 		return aDto(pedido, detalles, factura);
+	}
+
+	public List<PedidoDto> listar() {
+		return pedidoRepository.buscarTodosConDetalle().stream()
+				.map(pedido -> aDto(pedido, pedido.getDetalles(), pedido.getFactura()))
+				.toList();
+	}
+
+	@Transactional
+	public PedidoDto cambiarEstadoPreparacion(Integer idPedido, CambioEstadoPreparacionDto datos) {
+		String estado = datos.estadoPreparacion().trim().toUpperCase(Locale.ROOT);
+		if (!ESTADOS_PREPARACION.contains(estado)) {
+			throw new SolicitudInvalidaException("El estado de preparación no es válido: " + datos.estadoPreparacion() + ".");
+		}
+		Pedido pedido = pedidoRepository.findById(idPedido)
+				.orElseThrow(() -> new SolicitudInvalidaException("No existe el pedido con id " + idPedido + "."));
+		pedido.cambiarEstadoPreparacion(estado);
+		return aDto(pedido, pedido.getDetalles(), pedido.getFactura());
+	}
+
+	public CotizacionPedidoDto cotizar(CotizarPedidoRequestDto datos) {
+		Cliente cliente = clienteRepository.findById(datos.clienteId())
+				.orElseThrow(() -> new SolicitudInvalidaException(
+						"No existe el cliente con id " + datos.clienteId() + "."));
+		BigDecimal subtotal = prepararItems(datos.items()).stream()
+				.map(ItemPreparado::subtotal)
+				.reduce(BigDecimal.ZERO, BigDecimal::add);
+		LocalDate hoy = LocalDate.now(reloj);
+		Descuento descuentoActual = descuentoActual(cliente.getIdCliente(), hoy, subtotal);
+		List<AhorroPlanDto> ahorros = planRepository.findAllByActivoTrueOrderByIdPlanAsc().stream()
+				.map(plan -> aDto(plan, subtotal))
+				.toList();
+		return new CotizacionPedidoDto(
+				subtotal.subtract(descuentoActual.monto()),
+				descuentoActual.porcentaje(),
+				descuentoActual.monto(),
+				ahorros);
+	}
+
+	private Descuento descuentoActual(Integer idCliente, LocalDate hoy, BigDecimal subtotal) {
+		return membresiaRepository.buscarActivaPorCliente(idCliente, hoy)
+				.map(MembresiaCliente::getPlan)
+				.map(plan -> new Descuento(
+						plan.getPorcentajeDescuento(),
+						calcularDescuento(subtotal, plan.getPorcentajeDescuento())))
+				.orElse(new Descuento(BigDecimal.ZERO, BigDecimal.ZERO.setScale(2)));
+	}
+
+	private AhorroPlanDto aDto(PlanMembresia plan, BigDecimal subtotal) {
+		return new AhorroPlanDto(
+				plan.getIdPlan(),
+				plan.getNombrePlan(),
+				plan.getPorcentajeDescuento(),
+				calcularDescuento(subtotal, plan.getPorcentajeDescuento()));
+	}
+
+	private BigDecimal calcularDescuento(BigDecimal subtotal, BigDecimal porcentaje) {
+		return subtotal.multiply(porcentaje).divide(CIEN, 2, RoundingMode.HALF_UP);
 	}
 
 	// ---------------------------------------------------------------------
@@ -249,8 +329,13 @@ public class PedidoService {
 				pedido.getEstadoPreparacion(),
 				pedido.getEstadoCobro(),
 				pedido.getMontoTotal(),
+				pedido.getPorcentajeDescuento(),
+				pedido.getMontoDescuento(),
 				items,
 				facturaDto);
+	}
+
+	private record Descuento(BigDecimal porcentaje, BigDecimal monto) {
 	}
 
 	private record ItemPreparado(

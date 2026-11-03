@@ -20,11 +20,11 @@ Es el trabajo de **Prácticas Pre-Profesionales** de un equipo de 4 personas, co
 | ----------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------- |
 | Base de datos (21 tablas, datos base y de prueba)                                                                                         | Hecha                                                           |
 | Backend: catálogos y consultas de stock/producción                                                                                       | Hecho, con tests                                                |
-| Backend: pedidos (entidades, catálogos de venta y `POST /api/pedidos`)                                                                   | Hecho, con tests                                                |
+| Backend: pedidos (alta, listado, estado de preparación, cotización y descuentos de membresía)                                            | Hecho, con tests                                                |
 | Backend: abonos recurrentes, generador de pedidos (tarea diaria) y hojas de ruta                                                          | Hecho, con tests                                                |
-| Backend: pagos                                                                                                                            | **Pendiente**                                                   |
+| Backend: cobros B2B/B2C, registro de pagos y membresías de descuento (planes Básico, Plus y Premium)                                    | Hecho, con tests                                                |
 | Frontend: 6 pantallas (Alertas, Inventario, Tueste, Pedidos, Cobros, Caducidad)                                                           | Hechas con **datos de ejemplo**; todavía **no llaman a la API** |
-| Login con roles, configuración, compras de clientes, suscripción con descuento                                                            | **Pendiente** (ver sección 9)                                   |
+| Autenticación efectiva, configuración y `GET /api/mis-compras`                                                                             | **Pendiente** (ver sección 9)                                   |
 
 ## 3. Stack
 

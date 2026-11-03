@@ -71,6 +71,12 @@ public class Pedido {
 	@Column(name = "monto_total", nullable = false)
 	private BigDecimal montoTotal;
 
+	@Column(name = "porcentaje_descuento", nullable = false)
+	private BigDecimal porcentajeDescuento;
+
+	@Column(name = "monto_descuento", nullable = false)
+	private BigDecimal montoDescuento;
+
 	@OneToMany(mappedBy = "pedido", fetch = FetchType.LAZY)
 	private List<DetallePedido> detalles = new ArrayList<>();
 
@@ -87,12 +93,19 @@ public class Pedido {
 	// CONSTRUCTOR DE NEGOCIO
 	// ---------------------------------------------------------------------
 	public Pedido(Cliente cliente, CanalVenta canalVenta, LocalDateTime fechaHoraPedido, BigDecimal montoTotal) {
+		this(cliente, canalVenta, fechaHoraPedido, montoTotal, BigDecimal.ZERO, BigDecimal.ZERO);
+	}
+
+	public Pedido(Cliente cliente, CanalVenta canalVenta, LocalDateTime fechaHoraPedido, BigDecimal montoTotal,
+			BigDecimal porcentajeDescuento, BigDecimal montoDescuento) {
 		this.cliente = cliente;
 		this.canalVenta = canalVenta;
 		this.fechaHoraPedido = fechaHoraPedido;
 		this.estadoPreparacion = ESTADO_PREPARACION_PENDIENTE;
 		this.estadoCobro = ESTADO_COBRO_PENDIENTE;
 		this.montoTotal = montoTotal;
+		this.porcentajeDescuento = porcentajeDescuento;
+		this.montoDescuento = montoDescuento;
 	}
 
 	// ---------------------------------------------------------------------
@@ -110,6 +123,14 @@ public class Pedido {
 	public void asignarARuta(Integer idHojaRuta, Integer ordenVisita) {
 		this.idHojaRuta = idHojaRuta;
 		this.ordenVisita = ordenVisita;
+	}
+
+	public void cambiarEstadoPreparacion(String estadoPreparacion) {
+		this.estadoPreparacion = estadoPreparacion;
+	}
+
+	public void actualizarEstadoCobro(BigDecimal montoPagado) {
+		this.estadoCobro = montoPagado.compareTo(montoTotal) >= 0 ? "PAGADO" : "PARCIAL";
 	}
 
 	// ---------------------------------------------------------------------
@@ -157,6 +178,14 @@ public class Pedido {
 
 	public BigDecimal getMontoTotal() {
 		return montoTotal;
+	}
+
+	public BigDecimal getPorcentajeDescuento() {
+		return porcentajeDescuento;
+	}
+
+	public BigDecimal getMontoDescuento() {
+		return montoDescuento;
 	}
 
 	public List<DetallePedido> getDetalles() {

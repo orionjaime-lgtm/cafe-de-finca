@@ -57,6 +57,18 @@ public class Cliente {
 	protected Cliente() {
 	}
 
+	public static Cliente nuevoParticular(String nombre, String documento, String contacto) {
+		Cliente cliente = new Cliente();
+		cliente.tipoCliente = "B2C";
+		cliente.nombreRazonSocial = nombre;
+		cliente.cuitODni = documento;
+		cliente.condicionIva = "Consumidor Final";
+		cliente.plazoCtaCteDias = 0;
+		cliente.limiteCredito = java.math.BigDecimal.ZERO;
+		cliente.contactoWpIg = contacto;
+		return cliente;
+	}
+
 	// ---------------------------------------------------------------------
 	// GETTERS
 	// ---------------------------------------------------------------------

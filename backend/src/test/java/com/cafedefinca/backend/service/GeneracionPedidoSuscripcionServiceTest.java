@@ -72,7 +72,7 @@ class GeneracionPedidoSuscripcionServiceTest {
 		CanalVenta canal = Mockito.mock(CanalVenta.class);
 		HojaRuta hoja = Mockito.mock(HojaRuta.class);
 		PedidoDto pedidoCreado = new PedidoDto(50, 1, 3, ahora, "PENDIENTE", "PENDIENTE",
-				new BigDecimal("240000.00"), List.of(), null);
+				new BigDecimal("240000.00"), BigDecimal.ZERO, BigDecimal.ZERO, List.of(), null);
 
 		suscripcionRepository = Mockito.mock(SuscripcionRepository.class);
 		pedidoService = Mockito.mock(PedidoService.class);

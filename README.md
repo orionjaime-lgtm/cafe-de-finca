@@ -77,7 +77,7 @@ El esquema está en [`data-base/01-schema.sql`](data-base/01-schema.sql) y los d
 | **Abastecimiento** | `origen_cafe`, `proveedor`, `lote_cafe_verde` |
 | **Producción** | `perfil_tueste`, `orden_tueste`, `lote_cafe_tostado` |
 | **Catálogo de venta** | `presentacion`, `tipo_molienda` |
-| **Clientes y ventas** | `cliente`, `canal_venta`, `pedido`, `detalle_pedido`, `suscripcion`, `detalle_suscripcion`, `hoja_ruta` |
+| **Clientes y ventas** | `cliente`, `canal_venta`, `pedido`, `detalle_pedido`, `plan_membresia`, `membresia_cliente`, `suscripcion`, `detalle_suscripcion`, `hoja_ruta` |
 | **Finanzas** | `factura`, `medio_pago`, `pago` |
 
 ### Reglas que la base hace cumplir
@@ -252,7 +252,63 @@ Cuerpo del `POST /api/pedidos`:
 - Se utiliza el `loteTostadoId` enviado en cada ítem; no se sustituye por otro lote. El lote tiene que haber terminado el reposo, no estar vencido y tener stock disponible. Si se piden más gramos que los disponibles, responde `409` con "Stock insuficiente" y no guarda el pedido ni modifica el stock.
 - El descuento de stock, el pedido, sus detalles y la factura se procesan en una única transacción. Los lotes solicitados se bloquean durante la operación para evitar descuentos concurrentes.
 - Para clientes B2B se genera una factura simple de tipo `Factura A`, con número correlativo de cuatro dígitos y vencimiento según `plazo_cta_cte_dias`. La numeración se protege frente a pedidos simultáneos; no es una integración con AFIP.
-- La respuesta contiene el pedido, sus detalles y la factura (`null` para B2C). Los pagos se registran por separado.
+- Si el cliente tiene una membresía activa, se aplica su porcentaje al total del pedido. El descuento se redondea a dos decimales; la respuesta informa `porcentajeDescuento` y `montoDescuento`. Los pagos se registran por separado.
+- La respuesta contiene el pedido, sus detalles y la factura (`null` para B2C).
+
+### Backend: cobros y pagos
+
+| Endpoint | Qué hace |
+|---|---|
+| `GET /api/cobros/b2b` | Facturas B2B pendientes o parciales con deuda, datos de factura, vencimiento y estado. |
+| `GET /api/cobros/b2c` | Pagos B2C ordenados del más reciente al más antiguo. |
+| `POST /api/pagos` | Registra un pago y actualiza el estado de cobro del pedido. Responde `201`. |
+
+Cuerpo del `POST /api/pagos`:
+
+```json
+{ "pedidoId": 1, "medioPagoId": 2, "monto": 12000.00 }
+```
+
+- `PAGADO` se asigna al cubrir el total; en otro caso queda `PARCIAL`. Se rechazan pagos superiores al saldo pendiente (`409`).
+- El pedido se bloquea al registrar el pago para evitar sobrepagos concurrentes.
+- Los cobros B2B muestran `VENCIDO` cuando el vencimiento ya pasó, `POR_VENCER` si vence hoy o dentro de los próximos 7 días, y `AL_DIA` si falta más tiempo o no tiene fecha de vencimiento.
+
+### Backend: listado y estado de pedidos
+
+| Endpoint | Qué hace |
+|---|---|
+| `GET /api/pedidos` | Lista pedidos con cliente, detalles y factura. |
+| `PATCH /api/pedidos/{id}` | Actualiza el estado de preparación. |
+
+Cuerpo del `PATCH /api/pedidos/{id}`: `{ "estadoPreparacion": "EN_PREPARACION" }`. Los estados admitidos son `PENDIENTE`, `EN_PREPARACION`, `LISTO`, `ENTREGADO` y `CANCELADO`.
+
+### Backend: planes de suscripción con descuento
+
+Estos planes (`Plan Básico`, `Plan Plus` y `Plan Premium`) son membresías con descuento, distintas de los abonos recurrentes descritos más abajo.
+
+| Endpoint | Qué hace |
+|---|---|
+| `GET /api/planes-suscripcion` | Lista los planes activos y sus porcentajes de descuento. |
+| `POST /api/membresias` | Activa una membresía para un cliente en un plan. Responde `201`. |
+| `DELETE /api/membresias/{id}` | Cancela una membresía activa. |
+| `POST /api/pedidos/cotizar` | Devuelve total, descuento actual y ahorro estimado por cada plan activo. |
+
+Alta de membresía:
+
+```json
+{ "clienteId": 1, "planId": 2 }
+```
+
+Cotización (usa `clienteId` e `items`, con los mismos campos de cada ítem del `POST /api/pedidos`):
+
+```json
+{ "clienteId": 1, "items": [
+  { "loteTostadoId": 1, "presentacionId": 2, "tipoMoliendaId": 1,
+    "cantidadEnvases": 2, "precioUnitario": 12000.00 }
+] }
+```
+
+La respuesta de cotización incluye `montoTotal`, `porcentajeDescuentoAplicado`, `montoDescuentoAplicado` y `ahorroPorPlan` (plan, porcentaje y ahorro en dinero). La cotización no reserva ni descuenta stock. Cada cliente puede tener como máximo una membresía activa.
 
 ### Backend: abonos recurrentes (suscripciones)
 

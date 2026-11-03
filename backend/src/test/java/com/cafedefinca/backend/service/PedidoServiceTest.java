@@ -3,13 +3,16 @@ package com.cafedefinca.backend.service;
 import com.cafedefinca.backend.dto.NuevoPedidoDto;
 import com.cafedefinca.backend.dto.NuevoPedidoItemDto;
 import com.cafedefinca.backend.dto.PedidoDto;
+import com.cafedefinca.backend.dto.CotizarPedidoRequestDto;
 import com.cafedefinca.backend.entity.CanalVenta;
 import com.cafedefinca.backend.entity.Cliente;
 import com.cafedefinca.backend.entity.DetallePedido;
 import com.cafedefinca.backend.entity.Factura;
 import com.cafedefinca.backend.entity.LoteCafeTostado;
+import com.cafedefinca.backend.entity.MembresiaCliente;
 import com.cafedefinca.backend.entity.OrdenTueste;
 import com.cafedefinca.backend.entity.Pedido;
+import com.cafedefinca.backend.entity.PlanMembresia;
 import com.cafedefinca.backend.entity.Presentacion;
 import com.cafedefinca.backend.entity.TipoMolienda;
 import com.cafedefinca.backend.exception.SolicitudInvalidaException;
@@ -19,7 +22,9 @@ import com.cafedefinca.backend.repository.ClienteRepository;
 import com.cafedefinca.backend.repository.DetallePedidoRepository;
 import com.cafedefinca.backend.repository.FacturaRepository;
 import com.cafedefinca.backend.repository.LoteCafeTostadoRepository;
+import com.cafedefinca.backend.repository.MembresiaClienteRepository;
 import com.cafedefinca.backend.repository.PedidoRepository;
+import com.cafedefinca.backend.repository.PlanMembresiaRepository;
 import com.cafedefinca.backend.repository.PresentacionRepository;
 import com.cafedefinca.backend.repository.TipoMoliendaRepository;
 import org.junit.jupiter.api.BeforeEach;
@@ -58,6 +63,8 @@ class PedidoServiceTest {
 	private TipoMoliendaRepository tipoMoliendaRepository;
 	private LoteCafeTostadoRepository loteRepository;
 	private PedidoRepository pedidoRepository;
+	private MembresiaClienteRepository membresiaRepository;
+	private PlanMembresiaRepository planRepository;
 	private DetallePedidoRepository detalleRepository;
 	private FacturaRepository facturaRepository;
 	private PedidoService servicio;
@@ -75,6 +82,8 @@ class PedidoServiceTest {
 		tipoMoliendaRepository = org.mockito.Mockito.mock(TipoMoliendaRepository.class);
 		loteRepository = org.mockito.Mockito.mock(LoteCafeTostadoRepository.class);
 		pedidoRepository = org.mockito.Mockito.mock(PedidoRepository.class);
+		membresiaRepository = org.mockito.Mockito.mock(MembresiaClienteRepository.class);
+		planRepository = org.mockito.Mockito.mock(PlanMembresiaRepository.class);
 		detalleRepository = org.mockito.Mockito.mock(DetallePedidoRepository.class);
 		facturaRepository = org.mockito.Mockito.mock(FacturaRepository.class);
 
@@ -85,6 +94,8 @@ class PedidoServiceTest {
 				tipoMoliendaRepository,
 				loteRepository,
 				pedidoRepository,
+				membresiaRepository,
+				planRepository,
 				detalleRepository,
 				facturaRepository,
 				relojFijo);
@@ -189,6 +200,46 @@ class PedidoServiceTest {
 		assertThat(pedido.factura().fechaVencimiento()).isEqualTo(LocalDate.of(2026, 11, 12));
 		assertThat(pedido.factura().montoTotal()).isEqualByComparingTo("2000");
 		verify(facturaRepository).bloquearGeneracionDeNumero(7300002L);
+	}
+
+	@Test
+	void aplicaElDescuentoDeLaMembresiaAlCrearElPedido() {
+		PlanMembresia plan = org.mockito.Mockito.mock(PlanMembresia.class);
+		when(plan.getPorcentajeDescuento()).thenReturn(new BigDecimal("10.00"));
+		MembresiaCliente membresia = org.mockito.Mockito.mock(MembresiaCliente.class);
+		when(membresia.getPlan()).thenReturn(plan);
+		when(membresiaRepository.buscarActivaPorCliente(1, LocalDate.of(2026, 10, 28)))
+				.thenReturn(Optional.of(membresia));
+
+		PedidoDto pedido = servicio.crear(datosPedido());
+
+		assertThat(pedido.montoTotal()).isEqualByComparingTo("1800.00");
+		assertThat(pedido.porcentajeDescuento()).isEqualByComparingTo("10.00");
+		assertThat(pedido.montoDescuento()).isEqualByComparingTo("200.00");
+	}
+
+	@Test
+	void cotizarDevuelveElAhorroDeCadaPlanActivo() {
+		PlanMembresia basico = plan(1, "Plan Básico", "5.00");
+		PlanMembresia plus = plan(2, "Plan Plus", "10.00");
+		PlanMembresia premium = plan(3, "Plan Premium", "15.00");
+		when(planRepository.findAllByActivoTrueOrderByIdPlanAsc()).thenReturn(List.of(basico, plus, premium));
+
+		var cotizacion = servicio.cotizar(new CotizarPedidoRequestDto(1,
+				List.of(new NuevoPedidoItemDto(5, 3, 4, 2, new BigDecimal("1000.00")))));
+
+		assertThat(cotizacion.montoTotal()).isEqualByComparingTo("2000.00");
+		assertThat(cotizacion.montoDescuentoAplicado()).isEqualByComparingTo("0.00");
+		assertThat(cotizacion.ahorroPorPlan()).extracting("montoAhorro")
+				.containsExactly(new BigDecimal("100.00"), new BigDecimal("200.00"), new BigDecimal("300.00"));
+	}
+
+	private PlanMembresia plan(Integer id, String nombre, String porcentaje) {
+		PlanMembresia plan = org.mockito.Mockito.mock(PlanMembresia.class);
+		when(plan.getIdPlan()).thenReturn(id);
+		when(plan.getNombrePlan()).thenReturn(nombre);
+		when(plan.getPorcentajeDescuento()).thenReturn(new BigDecimal(porcentaje));
+		return plan;
 	}
 
 	// ---------------------------------------------------------------------

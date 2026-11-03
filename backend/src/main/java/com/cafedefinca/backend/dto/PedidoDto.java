@@ -12,6 +12,8 @@ public record PedidoDto(
 		String estadoPreparacion,
 		String estadoCobro,
 		BigDecimal montoTotal,
+		BigDecimal porcentajeDescuento,
+		BigDecimal montoDescuento,
 		List<DetallePedidoDto> items,
 		FacturaDto factura) {
 }

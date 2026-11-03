@@ -191,3 +191,17 @@ esto es lo que tenes que hacer:
 **Resultado:** primero la IA leyó el esquema, el servicio de pedidos y los datos de prueba, y presentó un plan sin modificar nada; el usuario lo confirmó y recién entonces se aplicó. Se implementó en tres ramas, una por punto (abonos, generador y hojas de ruta), con sus tests. Durante la verificación contra la base real se detectó y corrigió una consulta repetida por cada pedido en las hojas de ruta.
 
 **Decisiones confirmadas:** un abono sin stock se omite y su fecha no avanza (se reintenta en la próxima corrida); cada renglón toma el lote vendible más antiguo que alcance; si hay varios períodos atrasados se genera uno por corrida; la tarea diaria corre a las 06:00 hora de Buenos Aires y se puede apagar con `CAFE_SUSCRIPCIONES_TAREA_ACTIVA=false`.
+
+---
+
+## Prompt 9: cobros, pedidos y membresías con descuento
+
+```text
+Implementar los endpoints de cobros B2B y B2C, registro transaccional de pagos sin
+permitir sobrepagos, listado y cambio de estado de preparación de pedidos, y
+membresías con descuento usando los planes Básico, Plus y Premium de las tablas
+existentes. Aplicar el descuento en POST /api/pedidos y agregar POST
+/api/pedidos/cotizar con el ahorro potencial de cada plan. No modificar el esquema.
+```
+
+**Decisiones:** el ahorro potencial de la cotización se devuelve por cada plan activo; `POR_VENCER` abarca el vencimiento de hoy y los próximos siete días. `/api/mis-compras` queda pendiente hasta que las solicitudes tengan una identidad autenticada verificable.

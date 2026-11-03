@@ -282,6 +282,43 @@ Cuerpo del `POST /api/suscripciones`:
 
 - Errores: `400` si falta un dato, el cliente no existe o **no es B2B**, la frecuencia o el día no son válidos, o la fecha de fin es anterior a la primera entrega; `409` si el cambio de estado no está permitido (por ejemplo, reactivar una cancelada).
 
+### Backend: generador de pedidos de los abonos
+
+| Qué | Cómo se dispara |
+|---|---|
+| Tarea programada | Todos los días a las **06:00** (hora de Buenos Aires). |
+| `POST /api/suscripciones/generar` | A mano. Responde `200` con lo generado y lo omitido. |
+
+A cada abono **ACTIVO** con la entrega vencida (`proxima_fecha_generacion` de hoy o anterior, sin haber pasado su `fecha_fin`) le genera su pedido:
+
+1. **Reutiliza `PedidoService.crear`** con los precios pactados del abono: descuenta el stock y emite la factura B2B. El pedido sale por el canal *Mayorista (B2B)*.
+2. **Elige el lote de cada renglón**: el más antiguo (FIFO) que esté vendible (terminó el reposo, tiene stock, no está vencido ni agotado) y alcance para todo el renglón. Dentro del mismo pedido no ofrece dos veces el mismo café.
+3. **Lo asigna a la hoja de ruta de su fecha de entrega** (la crea si no existe) con el siguiente `orden_visita`.
+4. **Avanza la próxima fecha**: +7 días (semanal) o el mismo día del mes siguiente (mensual).
+
+Reglas:
+- **No duplica.** Cada abono se procesa en su propia transacción y bloqueado: si otra corrida ya lo generó, ya no le toca. Además la base tiene un índice único por abono y fecha de entrega. Correrlo dos veces, o varias a la vez, genera cada pedido una sola vez.
+- **No genera** para abonos `PAUSADOS` o `CANCELADOS`.
+- **Sin stock**: ese abono se omite, no se crea el pedido y **su fecha no avanza** (se reintenta en la próxima corrida). El motivo queda en el log y en la respuesta, y los demás abonos siguen.
+- Si hay varios períodos atrasados, genera uno por corrida (no crea entregas con fechas pasadas de golpe).
+
+Ejemplo de respuesta:
+
+```json
+{ "fecha": "2026-11-02",
+  "generados": [ { "suscripcionId": 1, "pedidoId": 6, "fechaEntrega": "2026-11-02", "montoTotal": 125000.00, "hojaRutaId": 4, "ordenVisita": 1 } ],
+  "omitidas":  [ { "suscripcionId": 5, "motivo": "No hay un lote vendible con 5000000 g libres para 1000 x Bolsa 5kg (Grano Entero)." } ] }
+```
+
+Configuración (opcional, como propiedad o variable de entorno):
+
+| Propiedad | Variable de entorno | Qué hace |
+|---|---|---|
+| `cafe.suscripciones.cron` | `CAFE_SUSCRIPCIONES_CRON` | Cambia el horario (por defecto `0 0 6 * * *`). |
+| `cafe.suscripciones.tarea-activa` | `CAFE_SUSCRIPCIONES_TAREA_ACTIVA` | Con `false` apaga la tarea diaria; el endpoint manual sigue funcionando. |
+
+> Los datos de prueba traen abonos con la entrega de "el día en que se creó la base". La primera vez que corra la tarea (o el `POST`) generará esos pedidos y descontará stock.
+
 > El backend se generó con IA y fue verificado por el equipo. Los prompts utilizados están en [`docs/uso-de-ia.md`](docs/uso-de-ia.md).
 
 ### Cómo está organizado el código

@@ -96,6 +96,23 @@ public class Pedido {
 	}
 
 	// ---------------------------------------------------------------------
+	// MÉTODOS DE NEGOCIO: REPARTO
+	// ---------------------------------------------------------------------
+
+	// Marca el pedido como generado por un abono, con la fecha de entrega de ese ciclo.
+	// La base exige las dos cosas juntas (un pedido de abono siempre tiene fecha de entrega).
+	public void asignarASuscripcion(Integer idSuscripcion, LocalDate fechaEntregaPrevista) {
+		this.idSuscripcion = idSuscripcion;
+		this.fechaEntregaPrevista = fechaEntregaPrevista;
+	}
+
+	// Lo asigna a la hoja de ruta de su fecha de entrega, con el lugar que ocupa en la visita
+	public void asignarARuta(Integer idHojaRuta, Integer ordenVisita) {
+		this.idHojaRuta = idHojaRuta;
+		this.ordenVisita = ordenVisita;
+	}
+
+	// ---------------------------------------------------------------------
 	// GETTERS
 	// ---------------------------------------------------------------------
 	public Integer getIdPedido() {

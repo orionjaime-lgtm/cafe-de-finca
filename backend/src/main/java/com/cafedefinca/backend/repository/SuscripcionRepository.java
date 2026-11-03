@@ -7,6 +7,7 @@ import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 
@@ -26,6 +27,18 @@ public interface SuscripcionRepository extends JpaRepository<Suscripcion, Intege
 			ORDER BY s.idSuscripcion
 			""")
 	List<Suscripcion> buscarTodasConDetalle();
+
+	// Ids de las suscripciones a las que les toca generar un pedido: ACTIVAS, con la entrega ya vencida
+	// (hoy o antes) y sin haber pasado su fecha de fin. Es la misma regla que Suscripcion.debeGenerarPedido.
+	@Query("""
+			SELECT s.idSuscripcion
+			FROM Suscripcion s
+			WHERE s.estado = com.cafedefinca.backend.enums.EstadoSuscripcion.ACTIVA
+			  AND s.proximaFechaGeneracion <= :hoy
+			  AND (s.fechaFin IS NULL OR s.proximaFechaGeneracion <= s.fechaFin)
+			ORDER BY s.proximaFechaGeneracion, s.idSuscripcion
+			""")
+	List<Integer> buscarIdsConPedidoPendiente(@Param("hoy") LocalDate hoy);
 
 	// Busca una suscripción y la bloquea hasta que termine la transacción (SELECT ... FOR UPDATE).
 	// Así, un cambio de estado y la generación de pedidos no pueden pisarse sobre la misma suscripción.

@@ -254,6 +254,34 @@ Cuerpo del `POST /api/pedidos`:
 - Para clientes B2B se genera una factura simple de tipo `Factura A`, con número correlativo de cuatro dígitos y vencimiento según `plazo_cta_cte_dias`. La numeración se protege frente a pedidos simultáneos; no es una integración con AFIP.
 - La respuesta contiene el pedido, sus detalles y la factura (`null` para B2C). Los pagos se registran por separado.
 
+### Backend: abonos recurrentes (suscripciones)
+
+| Endpoint | Qué hace |
+|---|---|
+| `GET /api/suscripciones` | Todos los abonos con su cliente y sus renglones. |
+| `POST /api/suscripciones` | Crea un abono. Responde `201`. Solo clientes **B2B**. |
+| `PATCH /api/suscripciones/{id}` | Pausa, reactiva o cancela. |
+
+Cuerpo del `POST /api/suscripciones`:
+
+```json
+{ "clienteId": 1, "frecuencia": "SEMANAL", "diaEntrega": 1, "fechaInicio": "2026-11-02", "fechaFin": null,
+  "items": [ { "presentacionId": 3, "tipoMoliendaId": 4, "cantidadEnvases": 2, "precioUnitario": 120000.00 } ] }
+```
+
+- `frecuencia` es `SEMANAL` (`diaEntrega` de 1 = lunes a 7 = domingo) o `MENSUAL` (`diaEntrega` de 1 a 28, así existe en todos los meses). `fechaInicio` y `fechaFin` son opcionales.
+- **Primera entrega:** el primer día de entrega que cae desde la fecha de inicio, o desde hoy si la fecha de inicio quedó en el pasado. Es `proximaFechaGeneracion`, la fecha de entrega del próximo pedido. El cálculo vive en el enum `FrecuenciaSuscripcion`: semanal suma 7 días; mensual repite el mismo día del mes siguiente.
+- El renglón guarda el **precio pactado**; el lote se elige recién al generar cada pedido, según el stock de ese día.
+- **Cambio de estado**, con el cuerpo `{ "estado": "PAUSADA" }`:
+
+| Desde | Hacia | Resultado |
+|---|---|---|
+| `ACTIVA` | `PAUSADA` | Deja de generar pedidos. |
+| `PAUSADA` | `ACTIVA` | Reactiva; si su próxima entrega quedó en el pasado, se recalcula para no generar de golpe todo lo atrasado. |
+| `ACTIVA` o `PAUSADA` | `CANCELADA` | Definitivo: una cancelada no vuelve. |
+
+- Errores: `400` si falta un dato, el cliente no existe o **no es B2B**, la frecuencia o el día no son válidos, o la fecha de fin es anterior a la primera entrega; `409` si el cambio de estado no está permitido (por ejemplo, reactivar una cancelada).
+
 > El backend se generó con IA y fue verificado por el equipo. Los prompts utilizados están en [`docs/uso-de-ia.md`](docs/uso-de-ia.md).
 
 ### Cómo está organizado el código

@@ -518,9 +518,9 @@ El proyecto avanza de adentro hacia afuera (*Data-First*): primero los datos, de
 - [x] Repositorio con colaboradores y `main` protegida
 - [x] Esqueleto del backend (Spring Boot conectado a la base)
 - [x] Endpoints de lectura del grupo A (catálogos, lotes tostados, caducidad, alertas y stock por origen)
-- [ ] Conversor a gramos con tests
-- [ ] Módulo de producción y stock
+- [x] Conversor a gramos con tests
+- [x] Módulo de producción y stock
 - [ ] Módulo de ventas y finanzas
-- [ ] Esqueleto del frontend y pantallas
-- [ ] Alertas de stock y panel de caducidad
+- [x] Esqueleto del frontend y pantallas
+- [x] Alertas de stock y panel de caducidad
 - [ ] Pruebas finales y pase a producción

@@ -11,6 +11,8 @@ import java.util.List;
  */
 public interface ClienteRepository extends JpaRepository<Cliente, Integer> {
 
+	boolean existsByCuitODni(String cuitODni);
+
 	// Todos los clientes, ordenados alfabéticamente
 	List<Cliente> findAllByOrderByNombreRazonSocialAsc();
 

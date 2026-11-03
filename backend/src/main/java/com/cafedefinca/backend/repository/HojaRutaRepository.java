@@ -9,12 +9,19 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.time.LocalDate;
+import java.util.List;
 import java.util.Optional;
 
 /**
  * Acceso a la tabla "hoja_ruta".
  */
 public interface HojaRutaRepository extends JpaRepository<HojaRuta, Integer> {
+
+	// Todas las hojas de ruta, de la más reciente a la más antigua
+	List<HojaRuta> findAllByOrderByFechaRepartoDesc();
+
+	// La hoja de un día (hay una sola por fecha)
+	Optional<HojaRuta> findByFechaReparto(LocalDate fechaReparto);
 
 	// Crea la hoja de esa fecha solo si todavía no existe (la fecha es UNIQUE en la base).
 	// "ON CONFLICT DO NOTHING" evita el error si dos generaciones la crean a la vez; el estado arranca PENDIENTE.

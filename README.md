@@ -319,6 +319,26 @@ Configuración (opcional, como propiedad o variable de entorno):
 
 > Los datos de prueba traen abonos con la entrega de "el día en que se creó la base". La primera vez que corra la tarea (o el `POST`) generará esos pedidos y descontará stock.
 
+### Backend: hojas de ruta
+
+| Endpoint | Qué hace |
+|---|---|
+| `GET /api/hojas-ruta` | Todas las hojas, de la más reciente a la más antigua, cada una con sus paradas. |
+| `GET /api/hojas-ruta?fecha=2026-11-09` | Solo la hoja de ese día. Si ese día no hay reparto devuelve una lista vacía. |
+| `GET /api/hojas-ruta/{id}` | Una hoja con sus paradas. |
+
+Solo consultan: las hojas y el orden de visita los arma el generador de pedidos de los abonos. Cada parada es un pedido a entregar, en orden de visita:
+
+```json
+{ "idHojaRuta": 4, "fechaReparto": "2026-11-02", "estadoRuta": "PENDIENTE",
+  "paradas": [ { "ordenVisita": 1, "pedidoId": 6, "clienteId": 2, "cliente": "Café Cortázar S.A.S.",
+                 "domicilio": "Av. Hipólito Yrigoyen 4120", "localidad": "Lanús",
+                 "montoTotal": 125000.00, "estadoPreparacion": "PENDIENTE" } ] }
+```
+
+- `fecha` va en formato `AAAA-MM-DD`; con otro formato responde `400`. Un id que no existe responde `400` con "No existe la hoja de ruta X.".
+- El `orden_visita` se asigna en el orden en que se generan los pedidos del día (1, 2, 3...). Todavía no se ordena por zona o localidad.
+
 > El backend se generó con IA y fue verificado por el equipo. Los prompts utilizados están en [`docs/uso-de-ia.md`](docs/uso-de-ia.md).
 
 ### Cómo está organizado el código

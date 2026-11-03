@@ -254,6 +254,91 @@ Cuerpo del `POST /api/pedidos`:
 - Para clientes B2B se genera una factura simple de tipo `Factura A`, con número correlativo de cuatro dígitos y vencimiento según `plazo_cta_cte_dias`. La numeración se protege frente a pedidos simultáneos; no es una integración con AFIP.
 - La respuesta contiene el pedido, sus detalles y la factura (`null` para B2C). Los pagos se registran por separado.
 
+### Backend: abonos recurrentes (suscripciones)
+
+| Endpoint | Qué hace |
+|---|---|
+| `GET /api/suscripciones` | Todos los abonos con su cliente y sus renglones. |
+| `POST /api/suscripciones` | Crea un abono. Responde `201`. Solo clientes **B2B**. |
+| `PATCH /api/suscripciones/{id}` | Pausa, reactiva o cancela. |
+
+Cuerpo del `POST /api/suscripciones`:
+
+```json
+{ "clienteId": 1, "frecuencia": "SEMANAL", "diaEntrega": 1, "fechaInicio": "2026-11-02", "fechaFin": null,
+  "items": [ { "presentacionId": 3, "tipoMoliendaId": 4, "cantidadEnvases": 2, "precioUnitario": 120000.00 } ] }
+```
+
+- `frecuencia` es `SEMANAL` (`diaEntrega` de 1 = lunes a 7 = domingo) o `MENSUAL` (`diaEntrega` de 1 a 28, así existe en todos los meses). `fechaInicio` y `fechaFin` son opcionales.
+- **Primera entrega:** el primer día de entrega que cae desde la fecha de inicio, o desde hoy si la fecha de inicio quedó en el pasado. Es `proximaFechaGeneracion`, la fecha de entrega del próximo pedido. El cálculo vive en el enum `FrecuenciaSuscripcion`: semanal suma 7 días; mensual repite el mismo día del mes siguiente.
+- El renglón guarda el **precio pactado**; el lote se elige recién al generar cada pedido, según el stock de ese día.
+- **Cambio de estado**, con el cuerpo `{ "estado": "PAUSADA" }`:
+
+| Desde | Hacia | Resultado |
+|---|---|---|
+| `ACTIVA` | `PAUSADA` | Deja de generar pedidos. |
+| `PAUSADA` | `ACTIVA` | Reactiva; si su próxima entrega quedó en el pasado, se recalcula para no generar de golpe todo lo atrasado. |
+| `ACTIVA` o `PAUSADA` | `CANCELADA` | Definitivo: una cancelada no vuelve. |
+
+- Errores: `400` si falta un dato, el cliente no existe o **no es B2B**, la frecuencia o el día no son válidos, o la fecha de fin es anterior a la primera entrega; `409` si el cambio de estado no está permitido (por ejemplo, reactivar una cancelada).
+
+### Backend: generador de pedidos de los abonos
+
+| Qué | Cómo se dispara |
+|---|---|
+| Tarea programada | Todos los días a las **06:00** (hora de Buenos Aires). |
+| `POST /api/suscripciones/generar` | A mano. Responde `200` con lo generado y lo omitido. |
+
+A cada abono **ACTIVO** con la entrega vencida (`proxima_fecha_generacion` de hoy o anterior, sin haber pasado su `fecha_fin`) le genera su pedido:
+
+1. **Reutiliza `PedidoService.crear`** con los precios pactados del abono: descuenta el stock y emite la factura B2B. El pedido sale por el canal *Mayorista (B2B)*.
+2. **Elige el lote de cada renglón**: el más antiguo (FIFO) que esté vendible (terminó el reposo, tiene stock, no está vencido ni agotado) y alcance para todo el renglón. Dentro del mismo pedido no ofrece dos veces el mismo café.
+3. **Lo asigna a la hoja de ruta de su fecha de entrega** (la crea si no existe) con el siguiente `orden_visita`.
+4. **Avanza la próxima fecha**: +7 días (semanal) o el mismo día del mes siguiente (mensual).
+
+Reglas:
+- **No duplica.** Cada abono se procesa en su propia transacción y bloqueado: si otra corrida ya lo generó, ya no le toca. Además la base tiene un índice único por abono y fecha de entrega. Correrlo dos veces, o varias a la vez, genera cada pedido una sola vez.
+- **No genera** para abonos `PAUSADOS` o `CANCELADOS`.
+- **Sin stock**: ese abono se omite, no se crea el pedido y **su fecha no avanza** (se reintenta en la próxima corrida). El motivo queda en el log y en la respuesta, y los demás abonos siguen.
+- Si hay varios períodos atrasados, genera uno por corrida (no crea entregas con fechas pasadas de golpe).
+
+Ejemplo de respuesta:
+
+```json
+{ "fecha": "2026-11-02",
+  "generados": [ { "suscripcionId": 1, "pedidoId": 6, "fechaEntrega": "2026-11-02", "montoTotal": 125000.00, "hojaRutaId": 4, "ordenVisita": 1 } ],
+  "omitidas":  [ { "suscripcionId": 5, "motivo": "No hay un lote vendible con 5000000 g libres para 1000 x Bolsa 5kg (Grano Entero)." } ] }
+```
+
+Configuración (opcional, como propiedad o variable de entorno):
+
+| Propiedad | Variable de entorno | Qué hace |
+|---|---|---|
+| `cafe.suscripciones.cron` | `CAFE_SUSCRIPCIONES_CRON` | Cambia el horario (por defecto `0 0 6 * * *`). |
+| `cafe.suscripciones.tarea-activa` | `CAFE_SUSCRIPCIONES_TAREA_ACTIVA` | Con `false` apaga la tarea diaria; el endpoint manual sigue funcionando. |
+
+> Los datos de prueba traen abonos con la entrega de "el día en que se creó la base". La primera vez que corra la tarea (o el `POST`) generará esos pedidos y descontará stock.
+
+### Backend: hojas de ruta
+
+| Endpoint | Qué hace |
+|---|---|
+| `GET /api/hojas-ruta` | Todas las hojas, de la más reciente a la más antigua, cada una con sus paradas. |
+| `GET /api/hojas-ruta?fecha=2026-11-09` | Solo la hoja de ese día. Si ese día no hay reparto devuelve una lista vacía. |
+| `GET /api/hojas-ruta/{id}` | Una hoja con sus paradas. |
+
+Solo consultan: las hojas y el orden de visita los arma el generador de pedidos de los abonos. Cada parada es un pedido a entregar, en orden de visita:
+
+```json
+{ "idHojaRuta": 4, "fechaReparto": "2026-11-02", "estadoRuta": "PENDIENTE",
+  "paradas": [ { "ordenVisita": 1, "pedidoId": 6, "clienteId": 2, "cliente": "Café Cortázar S.A.S.",
+                 "domicilio": "Av. Hipólito Yrigoyen 4120", "localidad": "Lanús",
+                 "montoTotal": 125000.00, "estadoPreparacion": "PENDIENTE" } ] }
+```
+
+- `fecha` va en formato `AAAA-MM-DD`; con otro formato responde `400`. Un id que no existe responde `400` con "No existe la hoja de ruta X.".
+- El `orden_visita` se asigna en el orden en que se generan los pedidos del día (1, 2, 3...). Todavía no se ordena por zona o localidad.
+
 > El backend se generó con IA y fue verificado por el equipo. Los prompts utilizados están en [`docs/uso-de-ia.md`](docs/uso-de-ia.md).
 
 ### Cómo está organizado el código
@@ -433,9 +518,9 @@ El proyecto avanza de adentro hacia afuera (*Data-First*): primero los datos, de
 - [x] Repositorio con colaboradores y `main` protegida
 - [x] Esqueleto del backend (Spring Boot conectado a la base)
 - [x] Endpoints de lectura del grupo A (catálogos, lotes tostados, caducidad, alertas y stock por origen)
-- [ ] Conversor a gramos con tests
-- [ ] Módulo de producción y stock
+- [x] Conversor a gramos con tests
+- [x] Módulo de producción y stock
 - [ ] Módulo de ventas y finanzas
-- [ ] Esqueleto del frontend y pantallas
-- [ ] Alertas de stock y panel de caducidad
+- [x] Esqueleto del frontend y pantallas
+- [x] Alertas de stock y panel de caducidad
 - [ ] Pruebas finales y pase a producción

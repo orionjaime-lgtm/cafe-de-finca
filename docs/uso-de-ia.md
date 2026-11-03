@@ -11,6 +11,7 @@ El backend de Café de Finca se generó con una IA (Claude Code) y fue verificad
 | 5. Implementación del punto 2 | Programador senior, luego QA | Decidir las ramas, implementar catálogos y lotes verdes, y después revisar el resultado. |
 | 6. Verificación con la base real | QA tester | Probar la base con datos reales, revisar lo implementado y subir la rama solo si todo está correcto. |
 | 7. Implementación de pedidos | Programador backend | Agregar entidades y catálogos de venta, registrar pedidos transaccionales, facturas B2B y pruebas de stock/reposo/caducidad. |
+| 8. Abonos recurrentes, generador de pedidos y hojas de ruta | Programador full stack senior (backend) | Analizar si los puntos 4 a 7 son necesarios, explicar el plan y, tras la confirmación del usuario, aplicarlos. |
 
 ---
 
@@ -155,3 +156,38 @@ lote vencido y lote en reposo. No modificar el esquema SQL.
 ```
 
 **Decisiones confirmadas:** el pedido usa exactamente el `loteTostadoId` que llega en cada ítem, sin reasignarlo a otro lote; las facturas se crean como `Factura A` con numeración correlativa interna.
+
+---
+
+## Prompt 8: abonos recurrentes, generador de pedidos y hojas de ruta
+
+```text
+[Rol]
+
+sos un desarrollador full stack senior con especializacion en backend
+
+[Objetivo]
+
+verificar, analizar si son necesarios los puntos indicados, encontrar donde se harian, como aplicarlos, explicar que tenes que hacer y luego de una confirmacion del usuario, aplicarlos
+
+[Contexto]
+
+te voy a pasar unos o objetivos a cumplir dentro del backend para terminar de pulir toda la aplicacion, quiero que los leas primero, no los agregues por agregar, entenderlos, contextualizate con el entorno en el que estas trabajando (proyecto) y luego verifiques si son necesarios y me indiques que vas a hacer
+
+[Restricciones]
+
+no hacer cosas de mas si no son necesarias, entender todo el archivo antes de modificar lo indicado ya que tal vez no es necesario, dejalo a tu criterio pero indicandome que vas a hacer.
+
+[Puntos indicados]
+
+esto es lo que tenes que hacer:
+
+4-Abonos recurrentes: POST/GET /api/suscripciones y PATCH /api/suscripciones/{id} (pausar, reactivar o cancelar). Solo clientes B2B.
+5-Generador de pedidos: POST /api/suscripciones/generar y una tarea programada (@Scheduled). Por cada suscripción ACTIVA con proxima_fecha_generacion vencida: crea el pedido con los precios pactados (reutilizá el servicio de pedidos de Ignacio), lo asigna a la hoja de ruta de esa fecha (si no existe, la crea) y avanza la próxima fecha (+7 días semanal, mismo dia_entrega del mes siguiente mensual). No debe duplicar pedidos si corre dos veces, no genera para abonos pausados y, si no hay stock, no genera ese pedido y deja registro sin frenar a los demás.
+6-Hojas de ruta: GET /api/hojas-ruta (con filtro por fecha) y GET /api/hojas-ruta/{id}, con cliente, domicilio y orden de visita.
+7-Tests del cálculo de la próxima fecha (semanal y mensual) y del generador.
+```
+
+**Resultado:** primero la IA leyó el esquema, el servicio de pedidos y los datos de prueba, y presentó un plan sin modificar nada; el usuario lo confirmó y recién entonces se aplicó. Se implementó en tres ramas, una por punto (abonos, generador y hojas de ruta), con sus tests. Durante la verificación contra la base real se detectó y corrigió una consulta repetida por cada pedido en las hojas de ruta.
+
+**Decisiones confirmadas:** un abono sin stock se omite y su fecha no avanza (se reintenta en la próxima corrida); cada renglón toma el lote vendible más antiguo que alcance; si hay varios períodos atrasados se genera uno por corrida; la tarea diaria corre a las 06:00 hora de Buenos Aires y se puede apagar con `CAFE_SUSCRIPCIONES_TAREA_ACTIVA=false`.

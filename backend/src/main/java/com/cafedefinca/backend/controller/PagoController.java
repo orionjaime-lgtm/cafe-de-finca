@@ -6,6 +6,7 @@ import com.cafedefinca.backend.service.PagoService;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestAttribute;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseStatus;
@@ -23,7 +24,9 @@ public class PagoController {
 
 	@PostMapping
 	@ResponseStatus(HttpStatus.CREATED)
-	public PagoDto registrar(@Valid @RequestBody NuevoPagoDto datos) {
-		return pagoService.registrar(datos);
+	public PagoDto registrar(
+			@RequestAttribute(name = "sesionClienteId", required = false) Integer clienteId,
+			@Valid @RequestBody NuevoPagoDto datos) {
+		return pagoService.registrar(datos, clienteId);
 	}
 }

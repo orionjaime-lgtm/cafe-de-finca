@@ -28,11 +28,12 @@ export function obtenerRutaInicio(secciones: string[], role: UserRole): string {
     cobros: '/cobros',
     caducidad: '/caducidad',
     clientes: '/clientes',
+    catalogo: '/catalogo',
     compras: '/compras',
     configuracion: '/configuracion',
   }
   if (role === 'vendedor') return rutas.pedidos
-  if (role === 'cliente') return rutas.compras
+  if (role === 'cliente') return rutas.catalogo
   if (role === 'tueste') return rutas[secciones.find((seccion) => seccion in rutas) ?? 'alertas'] ?? '/'
   return rutas[secciones.find((seccion) => seccion in rutas) ?? 'alertas'] ?? '/'
 }
@@ -46,13 +47,17 @@ function normalizarRol(rol: ApiSession['rol']): UserRole {
 }
 
 function guardarSesion(data: ApiSession): SessionUser {
+  const role = normalizarRol(data.rol)
+  const secciones = role === 'cliente'
+    ? Array.from(new Set([...data.secciones, 'catalogo', 'compras', 'configuracion']))
+    : data.secciones
   const session: SessionUser = {
     idUsuario: data.idUsuario,
     nombre: data.nombre,
     email: data.email,
-    role: normalizarRol(data.rol),
+    role,
     idCliente: data.idCliente,
-    secciones: data.secciones,
+    secciones,
     tipoCliente: 'particular',
     token: data.token,
   }
@@ -67,7 +72,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     try {
       const stored = localStorage.getItem(SESSION_KEY)
-      if (stored) setUser(JSON.parse(stored) as SessionUser)
+      if (stored) {
+        const session = JSON.parse(stored) as SessionUser
+        if (session.role === 'cliente') {
+          session.secciones = Array.from(new Set([...session.secciones, 'catalogo', 'compras', 'configuracion']))
+          localStorage.setItem(SESSION_KEY, JSON.stringify(session))
+        }
+        setUser(session)
+      }
     } catch {
       localStorage.removeItem(SESSION_KEY)
     } finally {
@@ -126,12 +138,14 @@ export function RoleGuard({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     if (!isReady || !user) return
-    const ruta = pathname === '/' ? 'alertas' : pathname.replace(/^\//, '').split('/')[0]
+    const seccionActual = pathname === '/' ? 'alertas' : pathname.replace(/^\//, '').split('/')[0]
+    const ruta = seccionActual === 'checkout' ? 'catalogo' : seccionActual
     if (!user.secciones.includes(ruta)) router.replace(obtenerRutaInicio(user.secciones, user.role))
   }, [isReady, user, pathname, router])
 
   if (!isReady || !user) return null
-  const ruta = pathname === '/' ? 'alertas' : pathname.replace(/^\//, '').split('/')[0]
+  const seccionActual = pathname === '/' ? 'alertas' : pathname.replace(/^\//, '').split('/')[0]
+  const ruta = seccionActual === 'checkout' ? 'catalogo' : seccionActual
   if (!user.secciones.includes(ruta)) return null
   return <>{children}</>
 }

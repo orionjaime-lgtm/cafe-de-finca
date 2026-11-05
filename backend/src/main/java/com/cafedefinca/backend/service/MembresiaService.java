@@ -49,6 +49,11 @@ public class MembresiaService {
 	}
 
 	@Transactional
+	public MembresiaDto activar(Integer clienteId, Integer planId) {
+		return crear(new NuevaMembresiaDto(clienteId, planId));
+	}
+
+	@Transactional
 	public MembresiaDto crear(NuevaMembresiaDto datos) {
 		Cliente cliente = clienteRepository.findById(datos.clienteId())
 				.orElseThrow(() -> new SolicitudInvalidaException(

@@ -205,3 +205,19 @@ existentes. Aplicar el descuento en POST /api/pedidos y agregar POST
 ```
 
 **Decisiones:** el ahorro potencial de la cotización se devuelve por cada plan activo; `POR_VENCER` abarca el vencimiento de hoy y los próximos siete días. `/api/mis-compras` queda pendiente hasta que las solicitudes tengan una identidad autenticada verificable.
+
+---
+
+## Prompt 10: compra y pago en una transacción
+
+```text
+Corregir el checkout para que el pedido y el pago se registren juntos al tocar
+«Comprar ahora». Si el pago falla, revertir también el pedido y el descuento de
+stock. Mantener el total visible, incluyendo el envío calculado por el servidor.
+No modificar el esquema SQL.
+```
+
+**Resultado:** se agregó `POST /api/compras`, que crea el pedido y registra el pago
+en una sola transacción. El servidor calcula el envío con la misma regla del
+checkout; si el pago no se puede registrar, la transacción revierte el pedido y
+el descuento de stock.

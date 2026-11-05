@@ -5,6 +5,7 @@ import com.cafedefinca.backend.dto.PedidoDto;
 import com.cafedefinca.backend.dto.CambioEstadoPreparacionDto;
 import com.cafedefinca.backend.dto.CotizacionPedidoDto;
 import com.cafedefinca.backend.dto.CotizarPedidoRequestDto;
+import com.cafedefinca.backend.enums.RolUsuario;
 import com.cafedefinca.backend.service.PedidoService;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
@@ -12,6 +13,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestAttribute;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseStatus;
@@ -43,14 +45,18 @@ public class PedidoController {
 	// ---------------------------------------------------------------------
 	@PostMapping
 	@ResponseStatus(HttpStatus.CREATED)
-	public PedidoDto crear(@Valid @RequestBody NuevoPedidoDto datos) {
-		return pedidoService.crear(datos);
+	public PedidoDto crear(
+			@RequestAttribute(name = "sesionClienteId", required = false) Integer clienteId,
+			@Valid @RequestBody NuevoPedidoDto datos) {
+		return pedidoService.crear(datos, clienteId);
 	}
 
 	// GET /api/pedidos -> lista los pedidos con sus detalles y factura
 	@GetMapping
-	public List<PedidoDto> listar() {
-		return pedidoService.listar();
+	public List<PedidoDto> listar(
+			@RequestAttribute(name = "sesionClienteId", required = false) Integer clienteId,
+			@RequestAttribute(name = "sesionRol", required = false) RolUsuario rol) {
+		return rol == RolUsuario.CLIENTE ? pedidoService.listarPorCliente(clienteId) : pedidoService.listar();
 	}
 
 	// PATCH /api/pedidos/{id} -> cambia el estado de preparación
@@ -63,7 +69,10 @@ public class PedidoController {
 
 	// POST /api/pedidos/cotizar -> cotiza el pedido y los ahorros de cada plan
 	@PostMapping("/cotizar")
-	public CotizacionPedidoDto cotizar(@Valid @RequestBody CotizarPedidoRequestDto datos) {
-		return pedidoService.cotizar(datos);
+	public CotizacionPedidoDto cotizar(
+			@RequestAttribute(name = "sesionClienteId", required = false) Integer clienteId,
+			@RequestAttribute(name = "sesionRol", required = false) RolUsuario rol,
+			@Valid @RequestBody CotizarPedidoRequestDto datos) {
+		return pedidoService.cotizar(datos, rol == RolUsuario.CLIENTE ? clienteId : null);
 	}
 }

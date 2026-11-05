@@ -61,20 +61,20 @@ export function RoasteryDemoProvider({ children }: { children: React.ReactNode }
       const puede = (seccion: string) => user?.secciones.includes(seccion) ?? false
       const [green, roasted, roastOrderList, originList, supplierList, profileList, clientList, presentationList, grindingList, stock, alertList, expiry, channelList, methodList, orderList, b2bList, b2cList] = await Promise.all([
         puede('inventario') ? apiGet<any[]>('/api/lotes-verdes') : Promise.resolve([]),
-        (puede('inventario') || puede('tueste') || puede('pedidos') || puede('cobros') || puede('compras')) ? apiGet<any[]>('/api/lotes-tostados') : Promise.resolve([]),
+        (puede('inventario') || puede('tueste') || puede('pedidos') || puede('cobros') || puede('compras') || puede('catalogo')) ? apiGet<any[]>('/api/lotes-tostados') : Promise.resolve([]),
         puede('tueste') ? apiGet<any[]>('/api/ordenes-tueste') : Promise.resolve([]),
         (puede('inventario') || puede('tueste')) ? apiGet<any[]>('/api/origenes') : Promise.resolve([]),
         (puede('inventario') || puede('tueste')) ? apiGet<any[]>('/api/proveedores') : Promise.resolve([]),
         (puede('inventario') || puede('tueste')) ? apiGet<any[]>('/api/perfiles-tueste') : Promise.resolve([]),
         (puede('clientes') || puede('pedidos') || puede('compras')) ? apiGet<any[]>('/api/clientes') : Promise.resolve([]),
-        (puede('inventario') || puede('pedidos') || puede('compras') || puede('cobros')) ? apiGet<any[]>('/api/presentaciones') : Promise.resolve([]),
-        (puede('inventario') || puede('pedidos') || puede('compras') || puede('cobros')) ? apiGet<any[]>('/api/tipos-molienda') : Promise.resolve([]),
+        (puede('inventario') || puede('pedidos') || puede('compras') || puede('catalogo') || puede('cobros')) ? apiGet<any[]>('/api/presentaciones') : Promise.resolve([]),
+        (puede('inventario') || puede('pedidos') || puede('compras') || puede('catalogo') || puede('cobros')) ? apiGet<any[]>('/api/tipos-molienda') : Promise.resolve([]),
         puede('inventario') || puede('tueste') || puede('alertas') ? apiGet<any[]>('/api/origenes/stock') : Promise.resolve([]),
         puede('alertas') || puede('tueste') ? apiGet<any[]>('/api/alertas') : Promise.resolve([]),
         puede('caducidad') ? apiGet<any>('/api/caducidad/resumen') : Promise.resolve({ activos: 0, porVencer: 0, vencidos: 0 }),
-        (puede('pedidos') || puede('cobros') || puede('compras')) ? apiGet<SaleChannel[]>('/api/canales-venta') : Promise.resolve([]),
-        (puede('pedidos') || puede('cobros') || puede('compras')) ? apiGet<PaymentMethod[]>('/api/medios-pago') : Promise.resolve([]),
-        (puede('pedidos') || puede('cobros')) ? apiGet<Order[]>('/api/pedidos') : Promise.resolve([]),
+        (puede('pedidos') || puede('cobros') || puede('compras') || puede('catalogo')) ? apiGet<SaleChannel[]>('/api/canales-venta') : Promise.resolve([]),
+        (puede('pedidos') || puede('cobros') || puede('compras') || puede('catalogo')) ? apiGet<PaymentMethod[]>('/api/medios-pago') : Promise.resolve([]),
+        (puede('pedidos') || puede('cobros') || puede('compras') || puede('catalogo')) ? apiGet<Order[]>('/api/pedidos') : Promise.resolve([]),
         puede('cobros') ? apiGet<B2bAccount[]>('/api/cobros/b2b') : Promise.resolve([]),
         puede('cobros') ? apiGet<B2cSale[]>('/api/cobros/b2c') : Promise.resolve([]),
       ])
@@ -143,17 +143,12 @@ export function RoasteryDemoProvider({ children }: { children: React.ReactNode }
     return row
   }
   async function recordCustomerOrder(order: { clienteId: number; loteTostadoId: number; presentacionId: number; tipoMoliendaId: number; cantidadEnvases: number; precioUnitario: number; canalVentaId: number; medioPagoId?: number; montoPago?: number }) {
-    const pedido = await recordOrder({
-      clienteId: order.clienteId,
-      canalVentaId: order.canalVentaId,
-      items: [{ loteTostadoId: order.loteTostadoId, presentacionId: order.presentacionId, tipoMoliendaId: order.tipoMoliendaId, cantidadEnvases: order.cantidadEnvases, precioUnitario: order.precioUnitario }],
+    const resultado = await apiPost<{ pedido: Order; pago?: { pagoId: number; pedidoId: number; medioPagoId: number; medioPago: string; fechaHoraPago: string; montoPagado: number; estadoCobro: string } }>('/api/compras', {
+      pedido: { clienteId: order.clienteId, canalVentaId: order.canalVentaId, items: [{ loteTostadoId: order.loteTostadoId, presentacionId: order.presentacionId, tipoMoliendaId: order.tipoMoliendaId, cantidadEnvases: order.cantidadEnvases, precioUnitario: order.precioUnitario }] },
+      medioPagoId: order.medioPagoId,
     })
-    let pago
-    if (order.medioPagoId && order.montoPago && pedido.estadoCobro !== 'PAGADO') {
-      pago = await recordPayment({ pedidoId: pedido.idPedido, medioPagoId: order.medioPagoId, monto: order.montoPago })
-    }
     await refresh()
-    return { pedido, pago }
+    return { pedido: resultado.pedido, pago: resultado.pago ? { ...resultado.pago, montoPagado: num(resultado.pago.montoPagado) } : undefined }
   }
   return <InventoryContext.Provider value={{ greenLots, roastedLots, roastOrders, origins, suppliers, roastProfiles, customers, presentations, grindingTypes, stockRows, alerts, expirySummary, saleChannels, paymentMethods, orders, b2bAccounts, b2cSales, isReady, storageError, refresh, updateStockMinimum, recordPurchase, recordRoast, recordOrder, quoteOrder, recordPayment, changeOrderStatus, recordCustomerOrder }}>{children}</InventoryContext.Provider>
 }

@@ -74,7 +74,7 @@ public class SesionApiFilter extends OncePerRequestFilter {
 				|| ruta.startsWith("/api/canales-venta") || ruta.startsWith("/api/medios-pago") || ruta.equals("/api/usuarios/listar");
 		}
 		if (rol == RolUsuario.CLIENTE) {
-			return ruta.startsWith("/api/pedidos/cotizar") || ruta.startsWith("/api/pedidos") || ruta.startsWith("/api/clientes")
+			return ruta.startsWith("/api/pedidos/cotizar") || ruta.startsWith("/api/pedidos") || ruta.startsWith("/api/pagos") || ruta.startsWith("/api/clientes")
 				|| ruta.startsWith("/api/membresias")
 				|| ruta.startsWith("/api/presentaciones") || ruta.startsWith("/api/tipos-molienda") || ruta.startsWith("/api/lotes-tostados")
 				|| ruta.startsWith("/api/canales-venta") || ruta.startsWith("/api/medios-pago");

@@ -36,9 +36,17 @@ public class PagoService {
 
 	@Transactional
 	public PagoDto registrar(NuevoPagoDto datos) {
+		return registrar(datos, null);
+	}
+
+	@Transactional
+	public PagoDto registrar(NuevoPagoDto datos, Integer clienteId) {
 		Pedido pedido = pedidoRepository.buscarPorIdConBloqueo(datos.pedidoId())
 				.orElseThrow(() -> new SolicitudInvalidaException(
 						"No existe el pedido con id " + datos.pedidoId() + "."));
+		if (clienteId != null && !pedido.getCliente().getIdCliente().equals(clienteId)) {
+			throw new SolicitudInvalidaException("Solo podés pagar pedidos asociados a tu cuenta.");
+		}
 		if ("PAGADO".equals(pedido.getEstadoCobro()) || "REEMBOLSADO".equals(pedido.getEstadoCobro())) {
 			throw new ConflictoException("El pedido no tiene saldo pendiente.");
 		}

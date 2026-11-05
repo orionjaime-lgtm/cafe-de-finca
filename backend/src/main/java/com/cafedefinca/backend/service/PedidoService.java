@@ -113,6 +113,14 @@ public class PedidoService {
 	// ---------------------------------------------------------------------
 	@Transactional
 	public PedidoDto crear(NuevoPedidoDto datos) {
+		return crear(datos, null);
+	}
+
+	@Transactional
+	public PedidoDto crear(NuevoPedidoDto datos, Integer clienteId) {
+		if (clienteId != null && !datos.clienteId().equals(clienteId)) {
+			throw new SolicitudInvalidaException("Solo podés crear pedidos asociados a tu cuenta.");
+		}
 		Cliente cliente = clienteRepository.findById(datos.clienteId())
 				.orElseThrow(() -> new SolicitudInvalidaException(
 						"No existe el cliente con id " + datos.clienteId() + "."));

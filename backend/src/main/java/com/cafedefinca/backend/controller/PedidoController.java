@@ -12,6 +12,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestAttribute;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseStatus;
@@ -43,8 +44,10 @@ public class PedidoController {
 	// ---------------------------------------------------------------------
 	@PostMapping
 	@ResponseStatus(HttpStatus.CREATED)
-	public PedidoDto crear(@Valid @RequestBody NuevoPedidoDto datos) {
-		return pedidoService.crear(datos);
+	public PedidoDto crear(
+			@RequestAttribute(name = "sesionClienteId", required = false) Integer clienteId,
+			@Valid @RequestBody NuevoPedidoDto datos) {
+		return pedidoService.crear(datos, clienteId);
 	}
 
 	// GET /api/pedidos -> lista los pedidos con sus detalles y factura

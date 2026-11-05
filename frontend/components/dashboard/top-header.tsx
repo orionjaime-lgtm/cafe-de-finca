@@ -1,6 +1,6 @@
 'use client'
 
-import { LogOut, Warehouse } from 'lucide-react'
+import { LogOut, Menu, Warehouse } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { obtenerNombreRol, useAuth } from '@/components/auth-provider'
 
@@ -14,16 +14,19 @@ export function TopHeader() {
   }
 
   return (
-    <header className="flex h-16 items-center justify-between border-b border-border bg-background/80 px-6 backdrop-blur lg:px-10">
-      <div className="flex items-center gap-2.5 text-sm text-foreground">
+    <header className="flex h-16 items-center justify-between border-b border-border bg-background/80 px-3 backdrop-blur sm:px-6 lg:px-10">
+      <div className="flex min-w-0 items-center gap-2.5 text-sm text-foreground">
+        <button type="button" aria-label="Abrir menú" onClick={() => window.dispatchEvent(new CustomEvent('cafe:abrir-menu'))} className="flex size-9 shrink-0 items-center justify-center rounded-lg border border-border bg-card text-foreground hover:bg-muted lg:hidden">
+          <Menu className="size-4.5" />
+        </button>
         <span className="flex size-8 items-center justify-center rounded-md border border-border bg-card">
           <Warehouse className="size-4 text-primary" aria-hidden="true" />
         </span>
-        <span className="font-medium">Tostaduría Principal</span>
-        <span className="text-muted-foreground" aria-hidden="true">
+        <span className="max-w-36 truncate font-medium sm:max-w-none">Tostaduría Principal</span>
+        <span className="hidden text-muted-foreground sm:inline" aria-hidden="true">
           ·
         </span>
-        <span className="text-muted-foreground">Buenos Aires</span>
+        <span className="hidden text-muted-foreground sm:inline">Buenos Aires</span>
       </div>
 
       <div className="flex items-center gap-3">

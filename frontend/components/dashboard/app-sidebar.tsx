@@ -1,5 +1,6 @@
 'use client'
 
+import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import {
@@ -16,6 +17,7 @@ import {
   Repeat2,
   Route,
   ShieldCheck,
+  X,
   type LucideIcon,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
@@ -43,19 +45,53 @@ export function AppSidebar() {
   const pathname = usePathname()
   const { alerts, isReady } = useRoasteryDemo()
   const { user } = useAuth()
+  const [mobileOpen, setMobileOpen] = useState(false)
   const alertBadge = isReady ? alerts.length : undefined
   const visibleNavItems = navItems.filter((item) => user?.secciones.includes(item.section))
 
+  useEffect(() => {
+    const abrir = () => setMobileOpen(true)
+    window.addEventListener('cafe:abrir-menu', abrir)
+    return () => window.removeEventListener('cafe:abrir-menu', abrir)
+  }, [])
+
+  useEffect(() => {
+    if (!mobileOpen) return
+    const cerrarConEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setMobileOpen(false)
+    }
+    document.body.style.overflow = 'hidden'
+    window.addEventListener('keydown', cerrarConEscape)
+    return () => {
+      document.body.style.overflow = ''
+      window.removeEventListener('keydown', cerrarConEscape)
+    }
+  }, [mobileOpen])
+
   return (
-    <aside className="sticky top-0 hidden h-screen w-64 shrink-0 flex-col bg-sidebar px-4 py-6 lg:flex">
-      <div className="flex items-center gap-3 px-2">
-        <div className="flex size-9 items-center justify-center rounded-lg bg-sidebar-primary">
-          <Leaf className="size-4.5 text-sidebar-primary-foreground" aria-hidden="true" />
+    <>
+      {mobileOpen && (
+        <button
+          type="button"
+          aria-label="Cerrar menú"
+          className="fixed inset-0 z-40 bg-black/45 backdrop-blur-[1px] lg:hidden"
+          onClick={() => setMobileOpen(false)}
+        />
+      )}
+      <aside className={cn('fixed inset-y-0 left-0 z-50 flex h-dvh w-[min(18rem,85vw)] shrink-0 flex-col bg-sidebar px-4 py-5 shadow-2xl transition-transform duration-200 lg:sticky lg:top-0 lg:z-auto lg:h-screen lg:w-64 lg:translate-x-0 lg:shadow-none lg:py-6', mobileOpen ? 'translate-x-0' : '-translate-x-full')}>
+      <div className="flex items-center justify-between gap-3 px-2">
+        <div className="flex items-center gap-3">
+          <div className="flex size-9 items-center justify-center rounded-lg bg-sidebar-primary">
+            <Leaf className="size-4.5 text-sidebar-primary-foreground" aria-hidden="true" />
+          </div>
+          <div className="leading-tight">
+            <p className="text-sm font-semibold text-white">Café de Finca</p>
+            <p className="text-xs text-sidebar-foreground">Control de Stock</p>
+          </div>
         </div>
-        <div className="leading-tight">
-          <p className="text-sm font-semibold text-white">Café de Finca</p>
-          <p className="text-xs text-sidebar-foreground">Control de Stock</p>
-        </div>
+        <button type="button" aria-label="Cerrar menú" onClick={() => setMobileOpen(false)} className="flex size-9 items-center justify-center rounded-lg text-sidebar-foreground hover:bg-white/10 hover:text-white lg:hidden">
+          <X className="size-4.5" />
+        </button>
       </div>
 
       <nav aria-label="Operaciones" className="mt-10 flex-1">
@@ -68,6 +104,7 @@ export function AppSidebar() {
             <li key={label}>
               <Link
                 href={href}
+                onClick={() => setMobileOpen(false)}
                 aria-current={active ? 'page' : undefined}
                 className={cn(
                   'relative flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm transition-colors',
@@ -108,5 +145,6 @@ export function AppSidebar() {
         <p className="mt-1 pl-4 text-xs text-sidebar-foreground">Stock sincronizado · hace 2 min</p>
       </div>
     </aside>
+    </>
   )
 }

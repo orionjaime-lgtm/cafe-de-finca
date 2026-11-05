@@ -68,6 +68,7 @@ public class SesionApiFilter extends OncePerRequestFilter {
 		if (rol == RolUsuario.VENDEDOR) {
 			return ruta.startsWith("/api/pedidos") || ruta.startsWith("/api/cobros") || ruta.startsWith("/api/pagos")
 				|| ruta.startsWith("/api/clientes") || ruta.startsWith("/api/hojas-ruta") || ruta.startsWith("/api/suscripciones")
+				|| ruta.startsWith("/api/caducidad")
 				|| ruta.startsWith("/api/membresias") || ruta.startsWith("/api/planes-suscripcion")
 				|| ruta.startsWith("/api/presentaciones") || ruta.startsWith("/api/tipos-molienda") || ruta.startsWith("/api/lotes-tostados")
 				|| ruta.startsWith("/api/canales-venta") || ruta.startsWith("/api/medios-pago") || ruta.equals("/api/usuarios/listar")

@@ -2,10 +2,13 @@ package com.cafedefinca.backend.service;
 
 import com.cafedefinca.backend.dto.OrigenStockDto;
 import com.cafedefinca.backend.dto.TotalPorOrigen;
+import com.cafedefinca.backend.dto.ActualizarStockMinimoDto;
 import com.cafedefinca.backend.entity.OrigenCafe;
+import com.cafedefinca.backend.exception.SolicitudInvalidaException;
 import com.cafedefinca.backend.enums.EstadoStock;
 import com.cafedefinca.backend.repository.LoteCafeVerdeRepository;
 import com.cafedefinca.backend.repository.OrigenCafeRepository;
+
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -71,6 +74,26 @@ public class OrigenService {
 			return EstadoStock.CRITICO;
 		}
 		return EstadoStock.BAJO;
+	}
+
+	// ---------------------------------------------------------------------
+	// ACTUALIZAR MÍNIMO
+	// ---------------------------------------------------------------------
+	@Transactional
+	public OrigenStockDto actualizarStockMinimo(Integer idOrigen, ActualizarStockMinimoDto datos) {
+		if (datos == null || datos.stockMinimoGramos() == null || datos.stockMinimoGramos().compareTo(BigDecimal.ZERO) < 0) {
+			throw new SolicitudInvalidaException("El stock mínimo no puede ser negativo.");
+		}
+		OrigenCafe origen = origenCafeRepository.findById(idOrigen)
+				.orElseThrow(() -> new SolicitudInvalidaException("No se encontró el origen solicitado."));
+		origen.actualizarStockMinimoAlerta(datos.stockMinimoGramos());
+		origenCafeRepository.save(origen);
+		BigDecimal stockActual = loteCafeVerdeRepository.sumarStockPorOrigen().stream()
+				.filter(total -> total.idOrigen().equals(idOrigen))
+				.map(TotalPorOrigen::totalGramos)
+				.findFirst()
+				.orElse(BigDecimal.ZERO);
+		return aDto(origen, stockActual);
 	}
 
 	// ---------------------------------------------------------------------

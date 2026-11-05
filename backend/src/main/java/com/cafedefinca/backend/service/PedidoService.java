@@ -48,6 +48,7 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
+import java.util.TreeMap;
 
 /**
  * Registra pedidos descontando el stock tostado y creando la factura B2B en una transacción.
@@ -178,7 +179,19 @@ public class PedidoService {
 		}
 		Pedido pedido = pedidoRepository.findById(idPedido)
 				.orElseThrow(() -> new SolicitudInvalidaException("No existe el pedido con id " + idPedido + "."));
+		String estadoAnterior = pedido.getEstadoPreparacion();
+		if ("CANCELADO".equals(estado) && !"CANCELADO".equals(estadoAnterior)) {
+			Map<Integer, BigDecimal> gramosPorLote = new TreeMap<>();
+			for (DetallePedido detalle : pedido.getDetalles()) {
+				gramosPorLote.merge(detalle.getLoteTostado().getIdLoteTostado(), detalle.getPesoTotalGramos(), BigDecimal::add);
+			}
+			Map<Integer, LoteCafeTostado> lotes = bloquearLotes(gramosPorLote.keySet());
+			for (Map.Entry<Integer, BigDecimal> entrada : gramosPorLote.entrySet()) {
+				lotes.get(entrada.getKey()).reponerStockDisponible(entrada.getValue());
+			}
+		}
 		pedido.cambiarEstadoPreparacion(estado);
+		if ("CANCELADO".equals(estado)) pedido.marcarReembolsado();
 		return aDto(pedido, pedido.getDetalles(), pedido.getFactura());
 	}
 

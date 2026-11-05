@@ -13,7 +13,6 @@ export function RoastWorkspace() {
   const [lotId, setLotId] = useState('')
   const [profileId, setProfileId] = useState('')
   const [greenAmount, setGreenAmount] = useState('5')
-  const [roastedAmount, setRoastedAmount] = useState('4.3')
   const [unit, setUnit] = useState<'kg' | 'lb' | 'g'>('kg')
   const [operator, setOperator] = useState('')
   const [error, setError] = useState<string | null>(null)
@@ -21,14 +20,20 @@ export function RoastWorkspace() {
   const availableLots = useMemo(() => greenLots.filter((lot) => lot.stockGrams > 0), [greenLots])
   const selectedLot = availableLots.find((lot) => lot.numericId === Number(lotId)) ?? availableLots[0]
   const selectedProfile = roastProfiles.find((profile) => profile.idPerfilTueste === Number(profileId)) ?? roastProfiles[0]
+  const roastedPreview = useMemo(() => {
+    const verde = Number(greenAmount)
+    const merma = selectedProfile?.mermaEsperadaPct ?? 0
+    if (!Number.isFinite(verde) || verde <= 0 || !Number.isFinite(merma)) return ''
+    return (verde * (1 - merma / 100)).toFixed(3).replace(/\.?0+$/, '')
+  }, [greenAmount, selectedProfile])
 
   async function submit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault(); setError(null); setSuccess(null)
     if (!selectedLot || !selectedProfile) { setError('Seleccioná un lote verde y un perfil de tueste.') ; return }
-    const verde = Number(greenAmount), tostado = Number(roastedAmount)
-    if (!Number.isFinite(verde) || verde <= 0 || !Number.isFinite(tostado) || tostado <= 0) { setError('Las cantidades deben ser mayores que cero.') ; return }
+    const verde = Number(greenAmount)
+    if (!Number.isFinite(verde) || verde <= 0 || !roastedPreview) { setError('La cantidad de café verde debe ser mayor que cero.') ; return }
     try {
-      await recordRoast({ idLoteVerde: selectedLot.numericId, idPerfilTueste: selectedProfile.idPerfilTueste, pesoVerdeUsado: verde, pesoTostadoObtenido: tostado, unidad: unit, operadorTostador: operator.trim() || undefined })
+      await recordRoast({ idLoteVerde: selectedLot.numericId, idPerfilTueste: selectedProfile.idPerfilTueste, pesoVerdeUsado: verde, unidad: unit, operadorTostador: operator.trim() || undefined })
       setSuccess('Orden de tueste registrada y stock actualizado.')
     } catch (caught) { setError(caught instanceof Error ? caught.message : 'No se pudo registrar el tueste.') }
   }
@@ -43,7 +48,7 @@ export function RoastWorkspace() {
             <div className="flex flex-col gap-2"><label className="text-sm font-medium">Perfil de tueste</label><select className={fieldClass} value={selectedProfile?.idPerfilTueste ?? ''} onChange={(event) => setProfileId(event.target.value)}><option value="">Seleccionar perfil</option>{roastProfiles.map((profile) => <option key={profile.idPerfilTueste} value={profile.idPerfilTueste}>{profile.nombrePerfil}</option>)}</select></div>
             <div className="flex flex-col gap-2"><label className="text-sm font-medium">Operador / responsable</label><input className={fieldClass} value={operator} onChange={(event) => setOperator(event.target.value)} placeholder="Nombre del operador" /></div>
             <div className="flex flex-col gap-2"><label className="text-sm font-medium">Café verde usado</label><input className={fieldClass} type="number" min="0.001" step="any" value={greenAmount} onChange={(event) => setGreenAmount(event.target.value)} /></div>
-            <div className="flex flex-col gap-2"><label className="text-sm font-medium">Café tostado obtenido</label><input className={fieldClass} type="number" min="0.001" step="any" value={roastedAmount} onChange={(event) => setRoastedAmount(event.target.value)} /></div>
+            <div className="flex flex-col gap-2"><label className="text-sm font-medium">Café tostado obtenido</label><input className={`${fieldClass} bg-muted text-muted-foreground`} type="text" readOnly value={roastedPreview ? `${roastedPreview} ${unit}` : 'Calculando…'} /><p className="text-xs text-muted-foreground">Se calcula automáticamente con la merma del perfil.</p></div>
             <div className="sm:col-span-2 flex flex-col gap-2"><label className="text-sm font-medium">Unidad</label><div className="flex rounded-lg border border-input bg-secondary p-1">{(['kg', 'lb', 'g'] as const).map((option) => <button key={option} type="button" onClick={() => setUnit(option)} className={`flex-1 rounded-md py-2 text-sm font-medium ${unit === option ? 'bg-card shadow-sm' : 'text-muted-foreground'}`}>{option}</button>)}</div></div>
           </div>
           {selectedProfile && <p className="rounded-lg bg-[#fbf3ea] px-4 py-3 text-sm text-[#6b4c3a]">Perfil {selectedProfile.nombrePerfil}: reposo mínimo de {selectedProfile.horasReposoMinimas} horas, merma esperada {grams.format(selectedProfile.mermaEsperadaPct)}%.</p>}

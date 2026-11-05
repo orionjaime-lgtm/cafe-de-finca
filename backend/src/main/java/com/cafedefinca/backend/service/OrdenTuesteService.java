@@ -18,6 +18,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.Clock;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -113,7 +114,7 @@ public class OrdenTuesteService {
 		PerfilTueste perfil = perfilTuesteRepository.findById(datos.idPerfilTueste())
 				.orElseThrow(() -> new SolicitudInvalidaException("No existe el perfil de tueste con id " + datos.idPerfilTueste() + "."));
 		BigDecimal verdeGramos = ConversorUnidades.aGramos(datos.pesoVerdeUsado(), datos.unidad());
-		BigDecimal tostadoGramos = ConversorUnidades.aGramos(datos.pesoTostadoObtenido(), datos.unidad());
+		BigDecimal tostadoGramos = calcularPesoTostado(verdeGramos, perfil);
 		LocalDateTime fechaTueste = LocalDateTime.now(reloj);
 		LocalDateTime finTueste;
 		LocalDateTime disponibleVenta;
@@ -121,10 +122,8 @@ public class OrdenTuesteService {
 		OrdenTueste orden;
 		LoteCafeTostado loteTostado;
 
-		// 1. El tostado nunca pesa más que el verde (la base también lo exige)
-		if (tostadoGramos.compareTo(verdeGramos) > 0) {
-			throw new SolicitudInvalidaException("El café tostado no puede pesar más que el verde usado.");
-		}
+		// 1. El peso tostado sale del perfil: verde × (100 − merma esperada) / 100.
+		// Nunca se acepta un café tostado enviado manualmente que pueda descalcular el stock.
 
 		// 2. Descontar el verde (lanza 409 si no alcanza)
 		loteVerde.descontarStock(verdeGramos);
@@ -170,6 +169,19 @@ public class OrdenTuesteService {
 	// Un perfil sin horas de reposo configuradas no tiene reposo
 	private int horasDeReposo(PerfilTueste perfil) {
 		return perfil.getHorasReposoMinimas() != null ? perfil.getHorasReposoMinimas() : 0;
+	}
+
+	private BigDecimal calcularPesoTostado(BigDecimal verdeGramos, PerfilTueste perfil) {
+		BigDecimal merma = perfil.getMermaEsperadaPct();
+		if (merma == null) {
+			merma = BigDecimal.ZERO;
+		}
+		if (merma.signum() < 0 || merma.compareTo(new BigDecimal("100")) >= 0) {
+			throw new SolicitudInvalidaException("La merma esperada del perfil debe estar entre 0 y 100%.");
+		}
+		BigDecimal porcentajeObtenido = new BigDecimal("100").subtract(merma);
+		return verdeGramos.multiply(porcentajeObtenido)
+				.divide(new BigDecimal("100"), 3, RoundingMode.HALF_UP);
 	}
 
 	// El operador es opcional: vacío o solo espacios se guarda como null

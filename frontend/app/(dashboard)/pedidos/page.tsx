@@ -15,7 +15,7 @@ export default function PedidosPage() {
         title="Nuevo Pedido (Conversor)"
         description="Registra una salida y convierte automáticamente la cantidad para mantener el inventario preciso."
       />
-      <div className="mt-8 max-w-3xl">
+      <div className="mt-8 max-w-5xl">
         <OrderForm />
       </div>
     </>

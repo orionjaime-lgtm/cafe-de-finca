@@ -145,4 +145,12 @@ public class LoteCafeTostado {
 			estadoDisponibilidad = "AGOTADO";
 		}
 	}
+
+	public void reponerStockDisponible(BigDecimal gramos) {
+		if (gramos == null || gramos.compareTo(BigDecimal.ZERO) <= 0) {
+			throw new IllegalArgumentException("Los gramos a reponer tienen que ser positivos.");
+		}
+		stockDisponibleGramos = stockDisponibleGramos.add(gramos);
+		estadoDisponibilidad = "DISPONIBLE";
+	}
 }

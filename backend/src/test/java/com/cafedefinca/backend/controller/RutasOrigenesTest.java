@@ -13,6 +13,8 @@ import java.util.List;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
+import static org.springframework.http.MediaType.APPLICATION_JSON;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 /**
@@ -52,6 +54,15 @@ class RutasOrigenesTest {
 	// ---------------------------------------------------------------------
 	// LOS OTROS CATÁLOGOS RESPONDEN
 	// ---------------------------------------------------------------------
+	@Test
+	void actualizaElStockMinimoDeUnOrigen() throws Exception {
+		mockMvc.perform(patch("/api/origenes/7/stock-minimo")
+				.contentType(APPLICATION_JSON)
+				.content("{\"stockMinimoGramos\":12000}"))
+				.andExpect(status().isOk());
+		verify(origenService).actualizarStockMinimo(org.mockito.ArgumentMatchers.eq(7), org.mockito.ArgumentMatchers.any());
+	}
+
 	@Test
 	void proveedoresYPerfilesDeTuesteResponden() throws Exception {
 		when(catalogoProduccionService.listarProveedores()).thenReturn(List.of());

@@ -101,13 +101,17 @@ class OrdenTuesteControllerTest {
 	}
 
 	@Test
-	void sinPesoTostadoResponde400() throws Exception {
+	void sinPesoTostadoManualSeAceptaPorqueElBackendLoCalcula() throws Exception {
 		String cuerpo = CUERPO_VALIDO.replace("\"pesoTostadoObtenido\": 4.25, ", "");
+		OrdenTuesteDto creada = new OrdenTuesteDto(10, 1, "LV-HUI-001", "Colombia Huila", 2, "Tueste Medio",
+				LocalDateTime.of(2026, 10, 28, 15, 0), new BigDecimal("5000.000"), new BigDecimal("4250.000"),
+				new BigDecimal("15.00"), "Marta", "COMPLETADO", "LT-1092",
+				LocalDateTime.of(2026, 10, 30, 15, 12), LocalDate.of(2026, 11, 27));
+		when(ordenTuesteService.crear(any(NuevaOrdenTuesteDto.class))).thenReturn(creada);
 
 		mockMvc.perform(post("/api/ordenes-tueste").contentType(MediaType.APPLICATION_JSON).content(cuerpo))
-				.andExpect(status().isBadRequest())
-				.andExpect(jsonPath("$.mensaje").value(containsString("pesoTostadoObtenido")));
-		verify(ordenTuesteService, never()).crear(any());
+				.andExpect(status().isCreated())
+				.andExpect(jsonPath("$.pesoTostadoObtenidoGramos").value(4250.000));
 	}
 
 	@Test

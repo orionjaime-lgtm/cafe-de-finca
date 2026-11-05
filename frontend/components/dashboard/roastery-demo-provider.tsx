@@ -5,7 +5,7 @@ import { apiGet, apiPatch, apiPost } from '@/lib/api'
 import { useAuth } from '@/components/auth-provider'
 
 export type GreenCoffeeLot = { id: string; numericId: number; code: string; origin: string; supplier: string; purchaseDate: string; stockGrams: number; initialGrams: number }
-export type RoastedCoffeeLot = { id: string; numericId: number; code: string; origin: string; profile: string; roastDate: string; availableDate: string; expirationDate: string; stockGrams: number; availableForSale: boolean; freshness: string }
+export type RoastedCoffeeLot = { id: string; numericId: number; code: string; origin: string; profile: string; roastDate: string; availableDate: string; expirationDate: string; stockGrams: number; availabilityStatus: string; availableForSale: boolean; freshness: string }
 export type RoastOrder = { id: string; numericId: number; lotId: string; origin: string; profile: string; greenInputGrams: number; roastedOutputGrams: number; lossPercent: number; createdAt: string; operator: string | null }
 export type Origin = { idOrigen: number; pais: string; region: string; variedad: string; alturaMsnm: number; notasCata: string; stockMinimoAlertaGramos: number }
 export type Supplier = { idProveedor: number; cuit: string; razonSocial: string; paisOrigen: string; telefonoEmail: string }
@@ -84,7 +84,7 @@ export function RoasteryDemoProvider({ children }: { children: React.ReactNode }
       setB2bAccounts(b2bList.map((row) => ({ ...row, deuda: num(row.deuda) })))
       setB2cSales(b2cList.map((row) => ({ ...row, montoPagado: num(row.montoPagado) })))
       setGreenLots(green.map((row) => ({ id: `VG-${row.idLoteVerde}`, numericId: row.idLoteVerde, code: row.codigoLote, origin: row.origen, supplier: row.proveedor, purchaseDate: row.fechaIngreso, stockGrams: num(row.stockActualGramos), initialGrams: num(row.pesoInicialGramos) })))
-      setRoastedLots(roasted.map((row) => ({ id: row.codigoLote ?? `LT-${row.idLoteTostado}`, numericId: row.idLoteTostado, code: row.codigoLote, origin: `${row.pais} ${row.region} · ${row.variedad}`, profile: row.perfilTueste, roastDate: row.fechaTueste?.slice(0, 10) ?? '', availableDate: row.fechaDisponibleVenta?.slice(0, 10) ?? '', expirationDate: row.fechaCaducidad ?? '', stockGrams: num(row.stockDisponibleGramos), availableForSale: row.disponibleParaVenta, freshness: row.estadoFrescura })))
+      setRoastedLots(roasted.map((row) => ({ id: row.codigoLote ?? `LT-${row.idLoteTostado}`, numericId: row.idLoteTostado, code: row.codigoLote, origin: `${row.pais} ${row.region} · ${row.variedad}`, profile: row.perfilTueste, roastDate: row.fechaTueste?.slice(0, 10) ?? '', availableDate: row.fechaDisponibleVenta ?? '', expirationDate: row.fechaCaducidad ?? '', stockGrams: num(row.stockDisponibleGramos), availabilityStatus: row.estadoDisponibilidad ?? '', availableForSale: row.disponibleParaVenta, freshness: row.estadoFrescura })))
       setRoastOrders(roastOrderList.map((row) => ({ id: row.codigoLoteTostado ?? `OT-${row.idOrdenTueste}`, numericId: row.idOrdenTueste, lotId: row.codigoLoteTostado ?? '', origin: row.origen, profile: row.perfilTueste, greenInputGrams: num(row.pesoVerdeUsadoGramos), roastedOutputGrams: num(row.pesoTostadoObtenidoGramos), lossPercent: num(row.mermaRealPct), createdAt: row.fechaHoraTueste, operator: row.operadorTostador })))
       setOrigins(originList.map((row) => ({ ...row, stockMinimoAlertaGramos: num(row.stockMinimoAlertaGramos) })))
       setSuppliers(supplierList)

@@ -79,4 +79,8 @@ public class OrigenCafe {
 	public BigDecimal getStockMinimoAlertaGramos() {
 		return stockMinimoAlertaGramos;
 	}
+
+	public void actualizarStockMinimoAlerta(BigDecimal stockMinimoGramos) {
+		this.stockMinimoAlertaGramos = stockMinimoGramos;
+	}
 }

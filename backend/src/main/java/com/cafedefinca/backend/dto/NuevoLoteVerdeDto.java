@@ -1,6 +1,8 @@
 package com.cafedefinca.backend.dto;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
+import com.cafedefinca.backend.util.EnteroEstrictoDeserializer;
+import tools.jackson.databind.annotation.JsonDeserialize;
 import com.fasterxml.jackson.annotation.OptBoolean;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -18,11 +20,11 @@ import java.time.LocalDate;
  * La fecha lleva lenient = FALSE: sin eso, un número suelto como 20261028 se tomaría como una fecha.
  */
 public record NuevoLoteVerdeDto(
-		@NotNull Integer idOrigen,
-		@NotNull Integer idProveedor,
+		@NotNull @JsonDeserialize(using = EnteroEstrictoDeserializer.class) Integer idOrigen,
+		@NotNull @JsonDeserialize(using = EnteroEstrictoDeserializer.class) Integer idProveedor,
 		@NotBlank @Size(max = 50) String codigoLote,
 		@NotNull @Positive BigDecimal cantidad,
 		@NotBlank String unidad,
-		@NotNull @Positive Integer cantBolsas,
+		@NotNull @Positive @JsonDeserialize(using = EnteroEstrictoDeserializer.class) Integer cantBolsas,
 		@JsonFormat(lenient = OptBoolean.FALSE) LocalDate fechaIngreso) {
 }

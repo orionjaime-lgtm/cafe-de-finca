@@ -29,9 +29,9 @@ public final class AuthDto {
 			@Size(max = 100, message = "El contacto es demasiado largo.") String contacto) {
 	}
 
-	public record Sesion(Integer idUsuario, String nombre, String email, RolUsuario rol, Integer idCliente, List<String> secciones) {
+	public record Sesion(Integer idUsuario, String nombre, String email, RolUsuario rol, Integer idCliente, List<String> secciones, String token) {
 		public static Sesion de(Usuario usuario) {
-			return new Sesion(usuario.getIdUsuario(), usuario.getNombre(), usuario.getEmail(), usuario.getRol(), usuario.getIdCliente(), usuario.getRol().getSecciones());
+			return new Sesion(usuario.getIdUsuario(), usuario.getNombre(), usuario.getEmail(), usuario.getRol(), usuario.getIdCliente(), usuario.getRol().getSecciones(), null);
 		}
 	}
 }

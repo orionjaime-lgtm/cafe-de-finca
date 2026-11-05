@@ -25,6 +25,8 @@ public class WebConfig implements WebMvcConfigurer {
 	public void addCorsMappings(CorsRegistry registro) {
 		registro.addMapping("/api/**")
 				.allowedOrigins(ORIGENES_FRONTEND)
-				.allowedMethods(METODOS_PERMITIDOS);
+				.allowedMethods(METODOS_PERMITIDOS)
+				.allowedHeaders("Authorization", "Content-Type")
+				.exposedHeaders("Authorization");
 	}
 }

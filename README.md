@@ -208,12 +208,13 @@ Cuerpo del `POST /api/ordenes-tueste`:
 
 ```json
 { "idLoteVerde": 1, "idPerfilTueste": 2, "pesoVerdeUsado": 5,
-  "pesoTostadoObtenido": 4.25, "unidad": "kg", "operadorTostador": "Marta" }
+  "unidad": "kg", "operadorTostador": "Marta" }
 ```
 
 Registrar un tueste hace tres cosas **en una sola transacción**: descuenta el café verde, guarda la orden y crea el lote tostado. Si algo falla, no queda nada a medias.
 
-- Los dos pesos llegan con la misma unidad (`g`, `kg` o `lb`) y se convierten a gramos con `ConversorUnidades`. El operador es opcional.
+- El peso verde llega en `g`, `kg` o `lb` y se convierte con `ConversorUnidades`. El operador es opcional.
+- El peso tostado se calcula automáticamente: `pesoVerde × (100 − mermaEsperadaPct) / 100`. Un valor manual enviado por un cliente se ignora; la merma esperada del perfil no se puede eludir.
 - La fecha del tueste la pone el backend con su reloj; el cliente no la manda.
 - **Lote tostado nuevo:** código `LT-xxxx` (el siguiente al mayor usado, desde `LT-1001`), estado `REPOSO` y todo el café disponible.
   - `fecha_hora_fin_tueste` = tueste + `tiempo_tueste_min` del perfil.

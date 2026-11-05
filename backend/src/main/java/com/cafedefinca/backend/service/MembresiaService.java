@@ -37,6 +37,10 @@ public class MembresiaService {
 		this.reloj = reloj;
 	}
 
+	public List<MembresiaDto> listar() {
+		return membresiaRepository.buscarTodasConClienteYPlan().stream().map(this::aDto).toList();
+	}
+
 	public List<PlanSuscripcionDto> listarPlanes() {
 		return planRepository.findAllByActivoTrueOrderByIdPlanAsc().stream()
 				.map(plan -> new PlanSuscripcionDto(plan.getIdPlan(), plan.getNombrePlan(),

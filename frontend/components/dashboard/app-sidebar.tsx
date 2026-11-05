@@ -13,24 +13,30 @@ import {
   ShoppingCart,
   Wallet,
   Users,
+  Repeat2,
+  Route,
+  ShieldCheck,
   type LucideIcon,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useRoasteryDemo } from '@/components/dashboard/roastery-demo-provider'
 import { useAuth } from '@/components/auth-provider'
 
-type NavItem = { label: string; icon: LucideIcon; href: string; badge?: number; roles?: ('admin' | 'cliente')[] }
+type NavItem = { label: string; icon: LucideIcon; href: string; section: string; badge?: number }
 
 const navItems: NavItem[] = [
-  { label: 'Inventario', icon: Package, href: '/inventario', roles: ['admin'] },
-  { label: 'Tueste', icon: Flame, href: '/tueste', roles: ['admin'] },
-  { label: 'Mis Compras', icon: ShoppingBag, href: '/compras', roles: ['cliente'] },
-  { label: 'Pedidos', icon: ShoppingCart, href: '/pedidos', roles: ['admin'] },
-  { label: 'Clientes', icon: Users, href: '/clientes', roles: ['admin'] },
-  { label: 'Cobros', icon: Wallet, href: '/cobros', roles: ['admin', 'cliente'] },
-  { label: 'Alertas', icon: Bell, href: '/', roles: ['admin'] },
-  { label: 'Caducidad', icon: CalendarClock, href: '/caducidad', roles: ['admin'] },
-  { label: 'Configuración', icon: Settings, href: '/configuracion', roles: ['admin', 'cliente'] },
+  { label: 'Inventario', icon: Package, href: '/inventario', section: 'inventario' },
+  { label: 'Tueste', icon: Flame, href: '/tueste', section: 'tueste' },
+  { label: 'Mis Compras', icon: ShoppingBag, href: '/compras', section: 'compras' },
+  { label: 'Pedidos', icon: ShoppingCart, href: '/pedidos', section: 'pedidos' },
+  { label: 'Clientes', icon: Users, href: '/clientes', section: 'clientes' },
+  { label: 'Abonos', icon: Repeat2, href: '/abonos', section: 'abonos' },
+  { label: 'Hojas de ruta', icon: Route, href: '/hojas-ruta', section: 'hojas-ruta' },
+  { label: 'Usuarios', icon: ShieldCheck, href: '/usuarios', section: 'usuarios' },
+  { label: 'Cobros', icon: Wallet, href: '/cobros', section: 'cobros' },
+  { label: 'Alertas', icon: Bell, href: '/', section: 'alertas' },
+  { label: 'Caducidad', icon: CalendarClock, href: '/caducidad', section: 'caducidad' },
+  { label: 'Configuración', icon: Settings, href: '/configuracion', section: 'configuracion' },
 ]
 
 export function AppSidebar() {
@@ -38,7 +44,7 @@ export function AppSidebar() {
   const { alerts, isReady } = useRoasteryDemo()
   const { user } = useAuth()
   const alertBadge = isReady ? alerts.length : undefined
-  const visibleNavItems = navItems.filter((item) => !item.roles || item.roles.includes(user?.role ?? 'cliente'))
+  const visibleNavItems = navItems.filter((item) => user?.secciones.includes(item.section))
 
   return (
     <aside className="sticky top-0 hidden h-screen w-64 shrink-0 flex-col bg-sidebar px-4 py-6 lg:flex">

@@ -1,6 +1,8 @@
 package com.cafedefinca.backend.dto;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
+import com.cafedefinca.backend.util.EnteroEstrictoDeserializer;
+import tools.jackson.databind.annotation.JsonDeserialize;
 import com.fasterxml.jackson.annotation.OptBoolean;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
@@ -20,7 +22,7 @@ import java.util.List;
 public record NuevaSuscripcionDto(
 		@NotNull @Positive Integer clienteId,
 		@NotBlank String frecuencia,
-		@NotNull Integer diaEntrega,
+		@NotNull @JsonDeserialize(using = EnteroEstrictoDeserializer.class) Integer diaEntrega,
 		@JsonFormat(lenient = OptBoolean.FALSE) LocalDate fechaInicio,
 		@JsonFormat(lenient = OptBoolean.FALSE) LocalDate fechaFin,
 		@NotEmpty List<@Valid NuevaSuscripcionItemDto> items) {

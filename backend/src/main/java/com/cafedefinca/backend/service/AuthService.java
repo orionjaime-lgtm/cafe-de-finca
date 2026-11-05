@@ -11,6 +11,7 @@ import com.cafedefinca.backend.repository.ClienteRepository;
 import com.cafedefinca.backend.repository.UsuarioRepository;
 import com.cafedefinca.backend.util.ValidadorContrasena;
 import java.util.Locale;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -21,11 +22,19 @@ public class AuthService {
 	private final UsuarioRepository usuarioRepository;
 	private final ClienteRepository clienteRepository;
 	private final PasswordEncoder codificador;
+	private final SesionTokenService sesionTokenService;
 
 	public AuthService(UsuarioRepository usuarioRepository, ClienteRepository clienteRepository, PasswordEncoder codificador) {
+		this(usuarioRepository, clienteRepository, codificador, new SesionTokenService("cafe-de-finca-desarrollo-cambiar-en-produccion"));
+	}
+
+	@Autowired
+	public AuthService(UsuarioRepository usuarioRepository, ClienteRepository clienteRepository, PasswordEncoder codificador,
+			SesionTokenService sesionTokenService) {
 		this.usuarioRepository = usuarioRepository;
 		this.clienteRepository = clienteRepository;
 		this.codificador = codificador;
+		this.sesionTokenService = sesionTokenService;
 	}
 
 	public AuthDto.Sesion iniciarSesion(AuthDto.Login datos) {
@@ -34,7 +43,8 @@ public class AuthService {
 		if (!usuario.isActivo() || !contrasenaCorrecta) {
 			throw new CredencialesInvalidasException();
 		}
-		return AuthDto.Sesion.de(usuario);
+		AuthDto.Sesion sesion = AuthDto.Sesion.de(usuario);
+		return conToken(sesion);
 	}
 
 	@Transactional
@@ -55,7 +65,13 @@ public class AuthService {
 		String contacto = (datos.contacto() == null || datos.contacto().isBlank()) ? null : datos.contacto().trim();
 		Cliente cliente = clienteRepository.save(Cliente.nuevoParticular(nombre, documento, contacto));
 		Usuario usuario = usuarioRepository.save(new Usuario(email, codificador.encode(datos.password()), nombre, RolUsuario.CLIENTE, cliente.getIdCliente()));
-		return AuthDto.Sesion.de(usuario);
+		AuthDto.Sesion sesion = AuthDto.Sesion.de(usuario);
+		return conToken(sesion);
+	}
+
+	private AuthDto.Sesion conToken(AuthDto.Sesion sesion) {
+		AuthDto.Sesion conToken = new AuthDto.Sesion(sesion.idUsuario(), sesion.nombre(), sesion.email(), sesion.rol(), sesion.idCliente(), sesion.secciones(), null);
+		return new AuthDto.Sesion(conToken.idUsuario(), conToken.nombre(), conToken.email(), conToken.rol(), conToken.idCliente(), conToken.secciones(), sesionTokenService.crear(conToken));
 	}
 
 	private String normalizarEmail(String email) {

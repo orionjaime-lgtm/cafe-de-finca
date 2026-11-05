@@ -133,6 +133,10 @@ public class Pedido {
 		this.estadoCobro = montoPagado.compareTo(montoTotal) >= 0 ? "PAGADO" : "PARCIAL";
 	}
 
+	public void marcarReembolsado() {
+		this.estadoCobro = "REEMBOLSADO";
+	}
+
 	// ---------------------------------------------------------------------
 	// GETTERS
 	// ---------------------------------------------------------------------

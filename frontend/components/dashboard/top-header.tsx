@@ -2,7 +2,7 @@
 
 import { LogOut, Warehouse } from 'lucide-react'
 import { useRouter } from 'next/navigation'
-import { useAuth } from '@/components/auth-provider'
+import { obtenerNombreRol, useAuth } from '@/components/auth-provider'
 
 export function TopHeader() {
   const { user, logout } = useAuth()
@@ -29,7 +29,7 @@ export function TopHeader() {
       <div className="flex items-center gap-3">
         <div className="hidden text-right leading-tight sm:block">
           <p className="text-sm font-medium">{user?.nombre ?? 'Usuario'}</p>
-          <p className="text-xs text-muted-foreground">{user?.role === 'admin' ? 'Administrador' : 'Cliente'}</p>
+          <p className="text-xs text-muted-foreground">{user ? obtenerNombreRol(user.role) : 'Usuario'}</p>
         </div>
         <div
           className="flex size-9 items-center justify-center rounded-full bg-secondary text-xs font-semibold text-primary"

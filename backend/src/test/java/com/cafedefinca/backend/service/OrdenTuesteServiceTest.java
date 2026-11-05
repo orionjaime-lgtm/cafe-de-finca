@@ -76,6 +76,7 @@ class OrdenTuesteServiceTest {
 		when(perfil.getNombrePerfil()).thenReturn("Tueste Medio");
 		when(perfil.getTiempoTuesteMin()).thenReturn(12);
 		when(perfil.getHorasReposoMinimas()).thenReturn(48);
+		when(perfil.getMermaEsperadaPct()).thenReturn(new BigDecimal("15"));
 
 		when(verdeRepository.buscarPorIdConBloqueo(1)).thenReturn(Optional.of(loteVerde));
 		when(perfilRepository.findById(2)).thenReturn(Optional.of(perfil));
@@ -186,20 +187,18 @@ class OrdenTuesteServiceTest {
 	// DATOS INVÁLIDOS (400 y no se descuenta nada)
 	// ---------------------------------------------------------------------
 	@Test
-	void elTostadoNoPuedePesarMasQueElVerde() {
-		assertThatThrownBy(() -> servicio.crear(pedido("5", "5.001", "kg", null)))
-				.isInstanceOf(SolicitudInvalidaException.class)
-				.hasMessageContaining("no puede pesar más que el verde");
+	void unPesoTostadoEnviadoManualNoModificaElResultadoCalculado() {
+		OrdenTuesteDto orden = servicio.crear(pedido("5", "5.001", "kg", null));
 
-		assertThat(loteVerde.getStockActualGramos()).isEqualByComparingTo("10000");
-		verify(ordenRepository, never()).saveAndFlush(any());
+		assertThat(orden.pesoTostadoObtenidoGramos()).isEqualByComparingTo("4250");
+		assertThat(loteVerde.getStockActualGramos()).isEqualByComparingTo("5000");
 	}
 
 	@Test
-	void elTostadoIgualAlVerdeSeAceptaPorqueLaMermaPuedeSerCero() {
+	void elPesoTostadoSeCalculaConLaMermaEsperadaDelPerfil() {
 		OrdenTuesteDto orden = servicio.crear(pedido("5", "5", "kg", null));
 
-		assertThat(orden.pesoTostadoObtenidoGramos()).isEqualByComparingTo("5000");
+		assertThat(orden.pesoTostadoObtenidoGramos()).isEqualByComparingTo("4250");
 	}
 
 	@Test

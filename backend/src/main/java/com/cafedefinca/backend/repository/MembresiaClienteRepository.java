@@ -9,6 +9,7 @@ import org.springframework.data.repository.query.Param;
 
 import java.time.LocalDate;
 import java.util.Optional;
+import java.util.List;
 
 public interface MembresiaClienteRepository extends JpaRepository<MembresiaCliente, Integer> {
 
@@ -23,6 +24,15 @@ public interface MembresiaClienteRepository extends JpaRepository<MembresiaClien
 			""")
 	Optional<MembresiaCliente> buscarActivaPorCliente(@Param("idCliente") Integer idCliente,
 			@Param("fecha") LocalDate fecha);
+
+	@Query("""
+			SELECT m
+			FROM MembresiaCliente m
+			JOIN FETCH m.cliente
+			JOIN FETCH m.plan
+			ORDER BY m.fechaInicio DESC, m.idMembresia DESC
+			""")
+	List<MembresiaCliente> buscarTodasConClienteYPlan();
 
 	@Lock(LockModeType.PESSIMISTIC_WRITE)
 	@Query("SELECT m FROM MembresiaCliente m WHERE m.idMembresia = :id")

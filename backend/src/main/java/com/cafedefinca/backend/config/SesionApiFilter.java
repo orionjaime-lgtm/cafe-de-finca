@@ -80,7 +80,7 @@ public class SesionApiFilter extends OncePerRequestFilter {
 			return (ruta.startsWith("/api/compras") && "POST".equals(metodo))
 				|| (ruta.equals("/api/pedidos/cotizar") && "POST".equals(metodo))
 				|| (ruta.equals("/api/pedidos") && ("GET".equals(metodo) || "POST".equals(metodo))) || ruta.startsWith("/api/pagos") || ruta.startsWith("/api/clientes")
-				|| ruta.startsWith("/api/membresias")
+				|| ruta.startsWith("/api/membresias") || ruta.startsWith("/api/planes-suscripcion")
 				|| ruta.startsWith("/api/presentaciones") || ruta.startsWith("/api/tipos-molienda") || ruta.startsWith("/api/lotes-tostados")
 				|| ruta.startsWith("/api/canales-venta") || ruta.startsWith("/api/medios-pago");
 		}

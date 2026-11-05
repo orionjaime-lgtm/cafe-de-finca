@@ -221,3 +221,11 @@ No modificar el esquema SQL.
 en una sola transacción. El servidor calcula el envío con la misma regla del
 checkout; si el pago no se puede registrar, la transacción revierte el pedido y
 el descuento de stock.
+
+## Prompt 11: compra de cliente sin membresia
+
+```text
+Corregir el permiso que impedia al rol cliente consultar los planes de membresia y evitar que el popup de membresia vuelva a aparecer al continuar una compra sin membresia.
+```
+
+**Resultado:** se agrego el acceso de lectura a `/api/planes-suscripcion` para el rol cliente y el checkout muestra la oferta de membresia como maximo una vez por visita. Se comprobo el acceso a los planes con la cuenta de prueba; no se registro una compra real.

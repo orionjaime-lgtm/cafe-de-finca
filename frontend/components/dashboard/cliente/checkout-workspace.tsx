@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Banknote, Building2, Check, CreditCard, Gift, Percent, ShoppingBag, Smartphone, X } from 'lucide-react'
 import { apiPost } from '@/lib/api'
@@ -21,6 +21,7 @@ export function CheckoutWorkspace() {
   const [payment, setPayment] = useState<'efectivo' | 'mercadopago' | 'transferencia' | 'tarjeta'>('mercadopago')
   const [quote, setQuote] = useState<OrderQuote | null>(null)
   const [showMembership, setShowMembership] = useState(false)
+  const membershipPromptShown = useRef(false)
   const [selectedPlanId, setSelectedPlanId] = useState<number | null>(null)
   const [activating, setActivating] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
@@ -49,7 +50,7 @@ export function CheckoutWorkspace() {
   useEffect(() => {
     if (!user?.idCliente || !lot || !presentation || !grinding || quantity < 1) return
     quoteOrder({ clienteId: user.idCliente, items: [{ loteTostadoId: Number(lot.numericId), presentacionId: presentation.idPresentacion, tipoMoliendaId: grinding.idTipoMolienda, cantidadEnvases: quantity, precioUnitario: unitPrice }] })
-      .then((result) => { setQuote(result); if ((result.porcentajeDescuentoAplicado ?? 0) === 0 && (result.ahorroPorPlan?.length ?? 0) > 0) { const mejor = result.ahorroPorPlan.reduce((best, plan) => plan.porcentajeDescuento > best.porcentajeDescuento ? plan : best); setSelectedPlanId(mejor.planId); setShowMembership(true) } })
+      .then((result) => { setQuote(result); if (!membershipPromptShown.current && (result.porcentajeDescuentoAplicado ?? 0) === 0 && (result.ahorroPorPlan?.length ?? 0) > 0) { membershipPromptShown.current = true; const mejor = result.ahorroPorPlan.reduce((best, plan) => plan.porcentajeDescuento > best.porcentajeDescuento ? plan : best); setSelectedPlanId(mejor.planId); setShowMembership(true) } })
       .catch((error) => setErrorMessage(error instanceof Error ? error.message : 'No se pudo calcular la compra.'))
   }, [user?.idCliente, lot?.numericId, presentation?.idPresentacion, grinding?.idTipoMolienda, quantity, unitPrice, quoteOrder])
 

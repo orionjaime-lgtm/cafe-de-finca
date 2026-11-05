@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import { Banknote, Building2, Check, CreditCard, Gift, Minus, Plus, Percent, ShoppingBag, Smartphone, Truck } from 'lucide-react'
+import { apiPost } from '@/lib/api'
 import { DashboardCard } from '@/components/dashboard/dashboard-card'
 import { useAuth } from '@/components/auth-provider'
 import { useRoasteryDemo } from '@/components/dashboard/roastery-demo-provider'
@@ -24,6 +25,8 @@ export function ComprasWorkspace() {
   const [isSaving, setIsSaving] = useState(false)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
   const [quote, setQuote] = useState<OrderQuote | null>(null)
+  const [activatingMembership, setActivatingMembership] = useState(false)
+  const [membershipMessage, setMembershipMessage] = useState<string | null>(null)
 
   const lot = disponibles.find((item) => item.id === lotId)
   const presentation = presentations.find((item) => item.idPresentacion.toString() === presentationId)
@@ -41,6 +44,8 @@ export function ComprasWorkspace() {
   const maxQuantity = lot && presentation
     ? Math.max(1, Math.floor(lot.stockGrams / presentation.pesoGramos))
     : 99
+  const recommendedPlan = quote?.ahorroPorPlan.reduce<OrderQuote['ahorroPorPlan'][number] | null>((best, plan) => !best || plan.porcentajeDescuento > best.porcentajeDescuento ? plan : best, null) ?? null
+  const activeMembershipDiscount = quote?.porcentajeDescuentoAplicado ?? 0
   useEffect(() => {
     if (!presentationId && presentations[0]) setPresentationId(presentations[0].idPresentacion.toString())
     if (!grindingId && grindingTypes[0]) setGrindingId(grindingTypes[0].idTipoMolienda.toString())
@@ -62,6 +67,22 @@ export function ComprasWorkspace() {
     { value: 'transferencia' as const, label: 'Transferencia', detail: 'Desde tu cuenta bancaria', icon: Building2 },
     { value: 'tarjeta' as const, label: 'Tarjeta', detail: 'Crédito o débito', icon: CreditCard },
   ]
+
+  async function activarMembresia() {
+    if (!recommendedPlan || !user?.idCliente || !lot || !presentation || !grinding) return
+    setActivatingMembership(true)
+    setMembershipMessage(null)
+    try {
+      await apiPost('/api/membresias/activar', { planId: recommendedPlan.planId })
+      const updatedQuote = await quoteOrder({ clienteId: user.idCliente, items: [{ loteTostadoId: Number(lot.numericId), presentacionId: presentation.idPresentacion, tipoMoliendaId: grinding.idTipoMolienda, cantidadEnvases: quantity, precioUnitario: unitPrice }] })
+      setQuote(updatedQuote)
+      setMembershipMessage(`Membresía ${recommendedPlan.nombrePlan} activada. El descuento se aplicó a esta compra.`)
+    } catch (error) {
+      setMembershipMessage(error instanceof Error ? error.message : 'No se pudo activar la membresía.')
+    } finally {
+      setActivatingMembership(false)
+    }
+  }
 
   async function confirmar() {
     if (!lot || !presentation || !grinding || quantity < 1 || !user?.idCliente) return
@@ -103,24 +124,39 @@ export function ComprasWorkspace() {
         </div>
       </DashboardCard>
       <DashboardCard
-        title={tipoCliente === 'mayorista' ? 'Beneficio mayorista' : 'Beneficio de envío particular'}
-        description={tipoCliente === 'mayorista'
-          ? 'Compras habituales con al menos 10 paquetes por compra.'
-          : 'Comprás 1 kg o más y esta compra tiene envío gratuito.'}
+        title="Membresía Café de Finca"
+        description="Beneficios calculados sobre el importe real de esta compra."
       >
-        {tipoCliente === 'particular' ? (
-          <div className="flex items-center gap-4 rounded-xl border border-border bg-secondary p-4 text-secondary-foreground dark:border-border dark:bg-secondary">
+        {particularFreeShipping && (
+          <div className="mb-3 flex items-center gap-4 rounded-xl border border-border bg-secondary p-4 text-secondary-foreground">
             <span className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-primary text-primary-foreground"><Truck className="size-5" /></span>
-            <div className="min-w-0 flex-1"><p className="text-sm font-semibold text-secondary-foreground">Envío gratis por esta compra</p><p className="mt-1 text-xs text-secondary-foreground/75 dark:text-muted-foreground">Se activa al seleccionar 1 kg de café o más.</p></div>
-            <span className={cn('shrink-0 rounded-full px-2.5 py-1 text-xs font-semibold', particularFreeShipping ? 'border border-success/30 bg-success/15 text-success dark:border-success/40 dark:text-green-300' : 'border border-border bg-card text-card-foreground')}>{particularFreeShipping ? 'ACTIVO' : `${(totalWeightGrams / 1000).toFixed(2)} / 1 kg`}</span>
-          </div>
-        ) : (
-          <div className="flex items-center gap-4 rounded-xl border border-border bg-card p-4 text-card-foreground">
-            <span className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-primary text-primary-foreground"><Gift className="size-5" /></span>
-            <div className="min-w-0 flex-1"><p className="text-sm font-semibold text-foreground">Descuento de membresía</p><p className="mt-1 text-xs text-muted-foreground">El porcentaje se calcula en el backend al cotizar el pedido.</p></div>
-            <span className={cn('shrink-0 rounded-full px-2.5 py-1 text-xs font-semibold', quote?.porcentajeDescuentoAplicado ? 'bg-success/15 text-success' : 'bg-muted text-muted-foreground')}>{quote?.porcentajeDescuentoAplicado ? `${quote.porcentajeDescuentoAplicado}%` : 'SIN DESCUENTO'}</span>
+            <div className="min-w-0 flex-1"><p className="text-sm font-semibold">Envío gratis por esta compra</p><p className="mt-1 text-xs text-secondary-foreground/75">Se activa al seleccionar 1 kg de café o más.</p></div>
+            <span className="shrink-0 rounded-full border border-success/30 bg-success/15 px-2.5 py-1 text-xs font-semibold text-success">ACTIVO</span>
           </div>
         )}
+        {activeMembershipDiscount > 0 ? (
+          <div className="flex items-center gap-4 rounded-xl border border-success/20 bg-success/5 p-4">
+            <span className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-success text-white"><Gift className="size-5" /></span>
+            <div className="min-w-0 flex-1"><p className="text-sm font-semibold text-foreground">Tu membresía ya aplica en esta compra</p><p className="mt-1 text-xs text-muted-foreground">Ahorrás {currency(discount)} con un descuento del {activeMembershipDiscount}%.</p></div>
+            <span className="shrink-0 rounded-full bg-success/15 px-2.5 py-1 text-xs font-semibold text-success">ACTIVA</span>
+          </div>
+        ) : recommendedPlan && quote ? (
+          <div className="overflow-hidden rounded-xl border border-primary/20 bg-primary/[0.035]">
+            <div className="flex flex-col gap-4 p-4 sm:flex-row sm:items-center">
+              <span className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-primary text-primary-foreground"><Percent className="size-5" /></span>
+              <div className="min-w-0 flex-1">
+                <div className="flex flex-wrap items-center gap-2"><p className="text-sm font-semibold text-foreground">Convertí esta compra con {recommendedPlan.nombrePlan}</p><span className="rounded-full bg-primary px-2 py-0.5 text-[10px] font-semibold text-primary-foreground">-{recommendedPlan.porcentajeDescuento}%</span></div>
+                <p className="mt-1 text-xs leading-relaxed text-muted-foreground">Ahorrarías {currency(recommendedPlan.montoAhorro)} en esta compra. El beneficio de membresía se aplica automáticamente.</p>
+              </div>
+              <button type="button" onClick={activarMembresia} disabled={activatingMembership || !lot || !presentation || !grinding} className="h-10 shrink-0 rounded-lg bg-primary px-4 text-sm font-semibold text-primary-foreground disabled:cursor-not-allowed disabled:opacity-50">
+                {activatingMembership ? 'Activando…' : 'Activar membresía'}
+              </button>
+            </div>
+          </div>
+        ) : (
+          <div className="rounded-xl border border-border bg-muted/30 p-4 text-sm text-muted-foreground">Seleccioná un café para calcular el beneficio disponible.</div>
+        )}
+        {membershipMessage && <p role="status" className="mt-3 rounded-lg border border-border bg-card px-3 py-2 text-xs text-muted-foreground">{membershipMessage}</p>}
       </DashboardCard>
       <DashboardCard title="Configurá tu compra" description="Seleccioná presentación y molienda antes de continuar al pago.">
         <div className="grid gap-4 sm:grid-cols-2"><label><span className="mb-2 block text-sm font-medium">Presentación</span><select value={presentationId} onChange={(event) => { setPresentationId(event.target.value); setQuantity(1); setConfirmed(false) }} className="h-11 w-full rounded-lg border border-input bg-card px-3 text-sm"><option value="">Seleccionar presentación</option>{presentations.map((item) => <option key={item.idPresentacion} value={item.idPresentacion}>{item.nombreEnvase} · {item.pesoGramos} g</option>)}</select></label><label><span className="mb-2 block text-sm font-medium">Molienda</span><select value={grindingId} onChange={(event) => { setGrindingId(event.target.value); setConfirmed(false) }} className="h-11 w-full rounded-lg border border-input bg-card px-3 text-sm"><option value="">Seleccionar molienda</option>{grindingTypes.map((item) => <option key={item.idTipoMolienda} value={item.idTipoMolienda}>{item.nombreMolienda}</option>)}</select></label></div>

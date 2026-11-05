@@ -10,7 +10,7 @@ export const metadata: Metadata = {
 export default function ComprasPage() {
   return (
     <>
-      <PageHeading eyebrow="CLIENTE / MIS COMPRAS" title="Mis Compras" description="Elegí café disponible, configuración y forma de pago para simular tu compra." />
+      <PageHeading eyebrow="CLIENTE / MIS COMPRAS" title="Mis Compras" description="Elegí café disponible, configurá tu pedido y completá el pago." />
       <ComprasWorkspace />
     </>
   )

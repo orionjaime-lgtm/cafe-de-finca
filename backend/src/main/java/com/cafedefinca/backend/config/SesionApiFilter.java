@@ -66,7 +66,8 @@ public class SesionApiFilter extends OncePerRequestFilter {
 				|| ruta.startsWith("/api/tipos-molienda") || ruta.startsWith("/api/canales-venta") || ruta.startsWith("/api/medios-pago");
 		}
 		if (rol == RolUsuario.VENDEDOR) {
-			return ruta.startsWith("/api/pedidos") || ruta.startsWith("/api/cobros") || ruta.startsWith("/api/pagos")
+			return (ruta.startsWith("/api/compras") && "POST".equals(metodo))
+				|| ruta.startsWith("/api/pedidos") || ruta.startsWith("/api/cobros") || ruta.startsWith("/api/pagos")
 				|| ruta.startsWith("/api/clientes") || ruta.startsWith("/api/hojas-ruta") || ruta.startsWith("/api/suscripciones")
 				|| ruta.startsWith("/api/caducidad")
 				|| ruta.startsWith("/api/membresias") || ruta.startsWith("/api/planes-suscripcion")
@@ -74,7 +75,9 @@ public class SesionApiFilter extends OncePerRequestFilter {
 				|| ruta.startsWith("/api/canales-venta") || ruta.startsWith("/api/medios-pago") || ruta.equals("/api/usuarios/listar");
 		}
 		if (rol == RolUsuario.CLIENTE) {
-			return ruta.startsWith("/api/pedidos/cotizar") || ruta.startsWith("/api/pedidos") || ruta.startsWith("/api/pagos") || ruta.startsWith("/api/clientes")
+			return (ruta.startsWith("/api/compras") && "POST".equals(metodo))
+				|| (ruta.equals("/api/pedidos/cotizar") && "POST".equals(metodo))
+				|| (ruta.equals("/api/pedidos") && ("GET".equals(metodo) || "POST".equals(metodo))) || ruta.startsWith("/api/pagos") || ruta.startsWith("/api/clientes")
 				|| ruta.startsWith("/api/membresias")
 				|| ruta.startsWith("/api/presentaciones") || ruta.startsWith("/api/tipos-molienda") || ruta.startsWith("/api/lotes-tostados")
 				|| ruta.startsWith("/api/canales-venta") || ruta.startsWith("/api/medios-pago");

@@ -63,6 +63,8 @@ public class PedidoService {
 	private static final String TIPO_FACTURA = "Factura A";
 	private static final long CLAVE_CANDADO_FACTURAS = 7300002L;
 	private static final BigDecimal CIEN = new BigDecimal("100");
+	private static final BigDecimal COSTO_ENVIO = new BigDecimal("3500");
+	private static final BigDecimal UMBRAL_ENVIO_GRATIS_GRAMOS = new BigDecimal("1000");
 	private static final Set<String> ESTADOS_PREPARACION = Set.of(
 			"PENDIENTE", "EN_PREPARACION", "LISTO", "ENTREGADO", "CANCELADO");
 
@@ -118,6 +120,15 @@ public class PedidoService {
 
 	@Transactional
 	public PedidoDto crear(NuevoPedidoDto datos, Integer clienteId) {
+		return crearInterno(datos, clienteId, false);
+	}
+
+	@Transactional
+	public PedidoDto crearCompra(NuevoPedidoDto datos, Integer clienteId) {
+		return crearInterno(datos, clienteId, true);
+	}
+
+	private PedidoDto crearInterno(NuevoPedidoDto datos, Integer clienteId, boolean incluirEnvio) {
 		if (clienteId != null && !datos.clienteId().equals(clienteId)) {
 			throw new SolicitudInvalidaException("Solo podés crear pedidos asociados a tu cuenta.");
 		}
@@ -139,7 +150,14 @@ public class PedidoService {
 				.map(ItemPreparado::subtotal)
 				.reduce(BigDecimal.ZERO, BigDecimal::add);
 		Descuento descuento = descuentoActual(cliente.getIdCliente(), hoy, subtotal);
-		BigDecimal montoTotal = subtotal.subtract(descuento.monto());
+		BigDecimal pesoTotal = items.stream()
+				.map(ItemPreparado::pesoTotalGramos)
+				.reduce(BigDecimal.ZERO, BigDecimal::add);
+		BigDecimal envio = incluirEnvio && !("B2C".equals(cliente.getTipoCliente())
+				&& pesoTotal.compareTo(UMBRAL_ENVIO_GRATIS_GRAMOS) >= 0)
+				? COSTO_ENVIO
+				: BigDecimal.ZERO;
+		BigDecimal montoTotal = subtotal.subtract(descuento.monto()).add(envio);
 
 		gramosPorLote.forEach((id, gramos) -> lotes.get(id).descontarStockDisponible(gramos));
 		Pedido pedido = pedidoRepository.saveAndFlush(new Pedido(
@@ -179,6 +197,12 @@ public class PedidoService {
 				.toList();
 	}
 
+	public List<PedidoDto> listarPorCliente(Integer idCliente) {
+		return pedidoRepository.buscarPorClienteConDetalle(idCliente).stream()
+				.map(pedido -> aDto(pedido, pedido.getDetalles(), pedido.getFactura()))
+				.toList();
+	}
+
 	@Transactional
 	public PedidoDto cambiarEstadoPreparacion(Integer idPedido, CambioEstadoPreparacionDto datos) {
 		String estado = datos.estadoPreparacion().trim().toUpperCase(Locale.ROOT);
@@ -204,6 +228,13 @@ public class PedidoService {
 	}
 
 	public CotizacionPedidoDto cotizar(CotizarPedidoRequestDto datos) {
+		return cotizar(datos, null);
+	}
+
+	public CotizacionPedidoDto cotizar(CotizarPedidoRequestDto datos, Integer clienteId) {
+		if (clienteId != null && !datos.clienteId().equals(clienteId)) {
+			throw new SolicitudInvalidaException("Solo podés cotizar compras asociadas a tu cuenta.");
+		}
 		Cliente cliente = clienteRepository.findById(datos.clienteId())
 				.orElseThrow(() -> new SolicitudInvalidaException(
 						"No existe el cliente con id " + datos.clienteId() + "."));

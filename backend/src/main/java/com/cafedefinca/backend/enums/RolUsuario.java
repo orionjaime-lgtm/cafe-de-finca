@@ -6,7 +6,7 @@ public enum RolUsuario {
 	ADMIN("alertas", "inventario", "tueste", "pedidos", "cobros", "caducidad", "clientes", "compras", "abonos", "hojas-ruta", "usuarios", "configuracion"),
 	TUESTE("alertas", "inventario", "tueste", "caducidad", "configuracion"),
 	VENDEDOR("pedidos", "cobros", "caducidad", "clientes", "hojas-ruta", "configuracion"),
-	CLIENTE("compras", "configuracion");
+	CLIENTE("catalogo", "compras", "configuracion");
 
 	private final List<String> secciones;
 

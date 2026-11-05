@@ -41,6 +41,21 @@ public interface PedidoRepository extends JpaRepository<Pedido, Integer> {
 			""")
 	List<Pedido> buscarTodosConDetalle();
 
+	@Query("""
+			SELECT DISTINCT p
+			FROM Pedido p
+			JOIN FETCH p.cliente
+			JOIN FETCH p.canalVenta
+			LEFT JOIN FETCH p.factura
+			LEFT JOIN FETCH p.detalles d
+			LEFT JOIN FETCH d.loteTostado
+			LEFT JOIN FETCH d.presentacion
+			LEFT JOIN FETCH d.tipoMolienda
+			WHERE p.cliente.idCliente = :idCliente
+			ORDER BY p.fechaHoraPedido DESC, p.idPedido DESC
+			""")
+	List<Pedido> buscarPorClienteConDetalle(@Param("idCliente") Integer idCliente);
+
 	@Lock(LockModeType.PESSIMISTIC_WRITE)
 	@Query("SELECT p FROM Pedido p WHERE p.idPedido = :id")
 	Optional<Pedido> buscarPorIdConBloqueo(@Param("id") Integer idPedido);

@@ -12,6 +12,7 @@ import {
   Settings,
   ShoppingBag,
   ShoppingCart,
+  Coffee,
   Wallet,
   Users,
   Repeat2,
@@ -29,6 +30,7 @@ type NavItem = { label: string; icon: LucideIcon; href: string; section: string;
 const navItems: NavItem[] = [
   { label: 'Inventario', icon: Package, href: '/inventario', section: 'inventario' },
   { label: 'Tueste', icon: Flame, href: '/tueste', section: 'tueste' },
+  { label: 'Cafés', icon: Coffee, href: '/catalogo', section: 'catalogo' },
   { label: 'Mis Compras', icon: ShoppingBag, href: '/compras', section: 'compras' },
   { label: 'Pedidos', icon: ShoppingCart, href: '/pedidos', section: 'pedidos' },
   { label: 'Clientes', icon: Users, href: '/clientes', section: 'clientes' },
